@@ -1,0 +1,157 @@
+const pool = require('../config/db');
+
+async function getTests(req, res) {
+  try {
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM tests
+      ORDER BY id
+      `
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ message: 'Ошибка получения тестов', error: error.message });
+  }
+}
+
+async function getTestById(req, res) {
+  try {
+    const testResult = await pool.query(
+      'SELECT * FROM tests WHERE id = $1',
+      [req.params.id]
+    );
+
+    if (testResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Тест не найден' });
+    }
+
+    const questionsResult = await pool.query(
+      `
+      SELECT
+        q.id AS question_id,
+        q.question_text,
+        q.category,
+        a.id AS answer_id,
+        a.answer_text,
+        a.score,
+        a.tag
+      FROM questions q
+      LEFT JOIN answers a ON a.question_id = q.id
+      WHERE q.test_id = $1
+      ORDER BY q.id, a.id
+      `,
+      [req.params.id]
+    );
+
+    const questionsMap = new Map();
+
+    for (const row of questionsResult.rows) {
+      if (!questionsMap.has(row.question_id)) {
+        questionsMap.set(row.question_id, {
+          id: row.question_id,
+          questionText: row.question_text,
+          category: row.category,
+          answers: []
+        });
+      }
+
+      if (row.answer_id) {
+        questionsMap.get(row.question_id).answers.push({
+          id: row.answer_id,
+          text: row.answer_text,
+          score: row.score,
+          tag: row.tag
+        });
+      }
+    }
+
+    res.json({
+      test: testResult.rows[0],
+      questions: Array.from(questionsMap.values())
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Ошибка получения теста', error: error.message });
+  }
+}
+
+async function submitTest(req, res) {
+  try {
+    const { answers } = req.body;
+
+    if (!Array.isArray(answers) || answers.length === 0) {
+      return res.status(400).json({ message: 'Ответы обязательны' });
+    }
+
+    const answerIds = answers.map(Number);
+
+    const answersResult = await pool.query(
+      `
+      SELECT id, score, tag
+      FROM answers
+      WHERE id = ANY($1::int[])
+      `,
+      [answerIds]
+    );
+
+    const totalScore = answersResult.rows.reduce(
+      (sum, item) => sum + Number(item.score || 0),
+      0
+    );
+
+    const resultTags = answersResult.rows.map(item => item.tag).filter(Boolean);
+
+    const result = await pool.query(
+      `
+      INSERT INTO test_results (
+        user_id,
+        test_id,
+        result_tags,
+        total_score
+      )
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+      `,
+      [
+        req.user.id,
+        req.params.id,
+        resultTags,
+        totalScore
+      ]
+    );
+
+    res.json({
+      message: 'Тест завершён',
+      result: result.rows[0]
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Ошибка сохранения результата теста', error: error.message });
+  }
+}
+
+async function getMyResults(req, res) {
+  try {
+    const result = await pool.query(
+      `
+      SELECT tr.*, t.title
+      FROM test_results tr
+      JOIN tests t ON t.id = tr.test_id
+      WHERE tr.user_id = $1
+      ORDER BY tr.created_at DESC
+      `,
+      [req.user.id]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ message: 'Ошибка получения результатов', error: error.message });
+  }
+}
+
+module.exports = {
+  getTests,
+  getTestById,
+  submitTest,
+  getMyResults
+};
