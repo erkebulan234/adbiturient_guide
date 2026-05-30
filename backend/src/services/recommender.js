@@ -1,48 +1,62 @@
 function normalizeArray(value) {
   if (!Array.isArray(value)) return [];
-  return value.map(item => String(item).toLowerCase().trim());
+
+  return value
+    .map(item => String(item).toLowerCase().trim())
+    .filter(Boolean);
 }
 
-function countMatches(userWords, itemWords) {
-  let count = 0;
+function buildVocabulary(userWords, specialtyWords) {
+  return Array.from(new Set([...userWords, ...specialtyWords]));
+}
 
-  for (const word of userWords) {
-    if (itemWords.includes(word)) {
-      count += 1;
-    }
+function buildVector(words, vocabulary) {
+  return vocabulary.map(word => (words.includes(word) ? 1 : 0));
+}
+
+function cosineSimilarity(vectorA, vectorB) {
+  let dotProduct = 0;
+  let magnitudeA = 0;
+  let magnitudeB = 0;
+
+  for (let i = 0; i < vectorA.length; i += 1) {
+    dotProduct += vectorA[i] * vectorB[i];
+    magnitudeA += vectorA[i] * vectorA[i];
+    magnitudeB += vectorB[i] * vectorB[i];
   }
 
-  return count;
+  if (magnitudeA === 0 || magnitudeB === 0) {
+    return 0;
+  }
+
+  return dotProduct / (Math.sqrt(magnitudeA) * Math.sqrt(magnitudeB));
 }
 
 function calculateScore(profile, specialty, testTags = []) {
-  const interests = normalizeArray(profile.interests);
-  const subjects = normalizeArray(profile.subjects);
-  const skills = normalizeArray(profile.skills);
-  const normalizedTestTags = normalizeArray(testTags);
+  const userWords = [
+    ...normalizeArray(profile.interests),
+    ...normalizeArray(profile.subjects),
+    ...normalizeArray(profile.skills),
+    ...normalizeArray(testTags)
+  ];
 
-  const tags = normalizeArray(specialty.tags);
-  const requiredSubjects = normalizeArray(specialty.required_subjects);
-  const requiredSkills = normalizeArray(specialty.required_skills);
+  const specialtyWords = [
+    ...normalizeArray(specialty.tags),
+    ...normalizeArray(specialty.required_subjects),
+    ...normalizeArray(specialty.required_skills)
+  ];
 
-  let score = 0;
+  const vocabulary = buildVocabulary(userWords, specialtyWords);
 
-  score += countMatches(interests, tags) * 3;
-  score += countMatches(subjects, requiredSubjects) * 4;
-  score += countMatches(skills, requiredSkills) * 3;
+  const userVector = buildVector(userWords, vocabulary);
+  const specialtyVector = buildVector(specialtyWords, vocabulary);
 
-  score += countMatches(normalizedTestTags, tags) * 4;
-  score += countMatches(normalizedTestTags, requiredSubjects) * 3;
-  score += countMatches(normalizedTestTags, requiredSkills) * 3;
+  const similarity = cosineSimilarity(userVector, specialtyVector);
 
-  return score;
+  return Math.round(similarity * 100);
 }
 
 function buildReason(profile, specialty, score, testTags = []) {
-  if (score === 0) {
-    return 'Подходит как дополнительный вариант для рассмотрения.';
-  }
-
   const reasons = [];
 
   const interests = normalizeArray(profile.interests);
@@ -54,27 +68,31 @@ function buildReason(profile, specialty, score, testTags = []) {
   const requiredSubjects = normalizeArray(specialty.required_subjects);
   const requiredSkills = normalizeArray(specialty.required_skills);
 
-  if (countMatches(interests, tags) > 0) {
-    reasons.push('совпадение по интересам');
+  if (interests.some(item => tags.includes(item))) {
+    reasons.push('интересы совпадают с направлением');
   }
 
-  if (countMatches(subjects, requiredSubjects) > 0) {
-    reasons.push('совпадение по любимым предметам');
+  if (subjects.some(item => requiredSubjects.includes(item))) {
+    reasons.push('любимые предметы подходят для специальности');
   }
 
-  if (countMatches(skills, requiredSkills) > 0) {
-    reasons.push('совпадение по навыкам');
+  if (skills.some(item => requiredSkills.includes(item))) {
+    reasons.push('навыки совпадают с требованиями');
   }
 
   if (
-    countMatches(normalizedTestTags, tags) > 0 ||
-    countMatches(normalizedTestTags, requiredSubjects) > 0 ||
-    countMatches(normalizedTestTags, requiredSkills) > 0
+    normalizedTestTags.some(item => tags.includes(item)) ||
+    normalizedTestTags.some(item => requiredSubjects.includes(item)) ||
+    normalizedTestTags.some(item => requiredSkills.includes(item))
   ) {
-    reasons.push('совпадение по результатам профориентационного теста');
+    reasons.push('результаты теста подтверждают выбор');
   }
 
-  return `Рекомендовано: ${reasons.join(', ')}.`;
+  if (reasons.length === 0) {
+    return 'Рекомендация рассчитана на основе общей похожести профиля и специальности.';
+  }
+
+  return `AI-модуль рекомендует это направление, потому что: ${reasons.join(', ')}.`;
 }
 
 module.exports = {

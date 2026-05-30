@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext.jsx';
+import logoMark from '../assets/navigator-logo-mark.png';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setUser } = useAuth();
+  const redirectTo = location.state?.from || '/profile';
 
   const [form, setForm] = useState({
     email: '',
@@ -13,6 +16,7 @@ export default function LoginPage() {
   });
 
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   function handleChange(event) {
     setForm({
@@ -24,6 +28,7 @@ export default function LoginPage() {
   async function handleSubmit(event) {
     event.preventDefault();
     setError('');
+    setIsLoading(true);
 
     try {
       const response = await api.post('/auth/login', form);
@@ -31,50 +36,62 @@ export default function LoginPage() {
       localStorage.setItem('token', response.data.token);
       setUser(response.data.user);
 
-      navigate('/profile');
+      navigate(redirectTo, { replace: true });
     } catch (error) {
-      setError(error.response?.data?.message || 'Ошибка входа');
+      setError(error.response?.data?.message || 'Не удалось войти');
+    } finally {
+      setIsLoading(false);
     }
   }
 
   return (
-    <div className="page">
-      <div className="card" style={{ maxWidth: 460, margin: '60px auto' }}>
-        <h1>Вход</h1>
-        <p>Войдите, чтобы получить рекомендации по специальности.</p>
+    <main className="auth-page">
+      <section className="auth-copy">
+        <Link to="/" className="brand">
+          <span className="brand-mark has-logo" aria-hidden="true">
+            <img className="brand-logo" src={logoMark} alt="" />
+          </span>
+          <span className="brand-text">
+            <strong>Навигатор</strong>
+            <small>для абитуриента</small>
+          </span>
+        </Link>
 
-        <form onSubmit={handleSubmit}>
-          <label>Email</label>
-          <input
-            className="input"
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            required
-          />
+        <div>
+          <p className="kicker">Возвращайтесь к подбору</p>
+          <h1>Продолжите путь к подходящей программе</h1>
+          <p className="lead">
+            Войдите, чтобы открыть анкету, результаты теста и персональные рекомендации.
+          </p>
+        </div>
+      </section>
 
-          <label>Пароль</label>
-          <input
-            className="input"
-            name="password"
-            type="password"
-            value={form.password}
-            onChange={handleChange}
-            required
-          />
+      <section className="auth-card panel">
+        <h2>Вход</h2>
+        <p>Используйте email и пароль, указанные при регистрации.</p>
+
+        <form onSubmit={handleSubmit} className="stack-form">
+          <label>
+            Email
+            <input className="input" name="email" type="email" value={form.email} onChange={handleChange} required />
+          </label>
+
+          <label>
+            Пароль
+            <input className="input" name="password" type="password" value={form.password} onChange={handleChange} required />
+          </label>
 
           {error && <p className="error">{error}</p>}
 
-          <button className="button" type="submit">
-            Войти
+          <button className="primary-button" type="submit" disabled={isLoading}>
+            {isLoading ? 'Входим...' : 'Войти'}
           </button>
         </form>
 
-        <p>
-          Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+        <p className="auth-switch">
+          Нет аккаунта? <Link className="text-link" to="/register">Зарегистрироваться</Link>
         </p>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

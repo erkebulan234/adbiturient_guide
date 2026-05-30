@@ -78,7 +78,7 @@ async function generateRecommendations(req, res) {
         return {
           ...item,
           score,
-          matchPercent: Math.min(Math.round((score / 50) * 100), 100),
+          matchPercent: score,
           reason
         };
       })
@@ -138,8 +138,8 @@ async function getRecommendations(req, res) {
       SELECT
         r.id,
         r.score,
+        r.score AS match_percent,
         r.reason,
-        LEAST(ROUND((r.score::numeric / 50) * 100), 100) AS match_percent,
         r.created_at,
 
         s.title,
@@ -174,13 +174,13 @@ async function getRecommendations(req, res) {
 
     res.json(result.rows);
   } catch (error) {
+    console.error('getRecommendations error:', error);
     res.status(500).json({
       message: 'Ошибка получения рекомендаций',
       error: error.message
     });
   }
 }
-
 module.exports = {
   generateRecommendations,
   getRecommendations

@@ -1,6 +1,14 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import logoMark from '../assets/navigator-logo-mark.png';
+
+const navItems = [
+  { to: '/profile', label: 'Обзор' },
+  { to: '/test', label: 'Тест' },
+  { to: '/results', label: 'Рекомендации' },
+  { to: '/institutions', label: 'Каталог' }
+];
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -12,53 +20,41 @@ export default function Navbar() {
   }
 
   return (
-    <nav style={styles.nav}>
-      <Link to="/profile" style={styles.logo}>Навигатор абитуриента</Link>
+    <header className="topbar">
+      <NavLink to="/profile" className="brand" aria-label="Навигатор абитуриента">
+        <span className="brand-mark has-logo" aria-hidden="true">
+          <img className="brand-logo" src={logoMark} alt="" />
+        </span>
+        <span className="brand-text">
+          <strong>Навигатор</strong>
+          <small>для абитуриента</small>
+        </span>
+      </NavLink>
 
-      <div style={styles.links}>
-        <Link to="/profile">Анкета</Link>
-        <Link to="/test">Тест</Link>
-        <Link to="/results">Рекомендации</Link>
-        <Link to="/institutions">Каталог</Link>
-        {user?.role === 'admin' && <Link to="/admin">Админ</Link>}
-        <button onClick={handleLogout} style={styles.logout}>Выйти</button>
-      </div>
-    </nav>
+      <nav className="nav" aria-label="Основная навигация">
+        {navItems.map(item => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          >
+            {item.label}
+          </NavLink>
+        ))}
+
+        {user?.role === 'admin' && (
+          <NavLink
+            to="/admin"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          >
+            Админ
+          </NavLink>
+        )}
+      </nav>
+
+      <button className="quiet-button" type="button" onClick={handleLogout}>
+        Выйти
+      </button>
+    </header>
   );
 }
-
-const styles = {
-  nav: {
-    minHeight: 68,
-    background: '#ffffff',
-    borderBottom: '1px solid #e1e7ef',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '0 28px',
-    position: 'sticky',
-    top: 0,
-    zIndex: 10,
-    boxShadow: '0 4px 18px rgba(15, 23, 42, 0.04)'
-  },
-  logo: {
-    fontWeight: 800,
-    color: '#2563eb',
-    fontSize: 18
-  },
-  links: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 18,
-    flexWrap: 'wrap'
-  },
-  logout: {
-    border: 'none',
-    background: '#ef4444',
-    color: 'white',
-    padding: '9px 13px',
-    borderRadius: 10,
-    cursor: 'pointer',
-    fontWeight: 700
-  }
-};

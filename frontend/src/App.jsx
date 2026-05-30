@@ -1,5 +1,6 @@
 import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
@@ -8,17 +9,8 @@ import ResultsPage from './pages/ResultsPage';
 import Institutions from './pages/Institutions';
 import AdminPage from './pages/AdminPage';
 import Navbar from './components/Navbar';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { useAuth } from './context/AuthContext.jsx';
-
-function ProtectedRoute({ children }) {
-  const { user } = useAuth();
-
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-
-  return children;
-}
 
 export default function App() {
   const { user } = useAuth();
@@ -28,7 +20,8 @@ export default function App() {
       {user && <Navbar />}
 
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={user ? <Navigate to="/profile" /> : <LandingPage />} />
+        <Route path="/login" element={user ? <Navigate to="/profile" /> : <LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
         <Route
@@ -70,13 +63,12 @@ export default function App() {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="admin">
               <AdminPage />
             </ProtectedRoute>
           }
         />
 
-        <Route path="/" element={<Navigate to={user ? '/profile' : '/login'} />} />
       </Routes>
     </>
   );

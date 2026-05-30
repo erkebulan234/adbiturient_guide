@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext.jsx';
+import logoMark from '../assets/navigator-logo-mark.png';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function RegisterPage() {
   });
 
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   function handleChange(event) {
     setForm({
@@ -25,6 +27,7 @@ export default function RegisterPage() {
   async function handleSubmit(event) {
     event.preventDefault();
     setError('');
+    setIsLoading(true);
 
     try {
       const response = await api.post('/auth/register', form);
@@ -34,56 +37,65 @@ export default function RegisterPage() {
 
       navigate('/profile');
     } catch (error) {
-      setError(error.response?.data?.message || 'Ошибка регистрации');
+      setError(error.response?.data?.message || 'Не удалось создать аккаунт');
+    } finally {
+      setIsLoading(false);
     }
   }
 
   return (
-    <div className="page">
-      <div className="card" style={{ maxWidth: 460, margin: '60px auto' }}>
-        <h1>Регистрация</h1>
-        <p>Создайте аккаунт, чтобы заполнить анкету абитуриента.</p>
+    <main className="auth-page">
+      <section className="auth-copy">
+        <Link to="/" className="brand">
+          <span className="brand-mark has-logo" aria-hidden="true">
+            <img className="brand-logo" src={logoMark} alt="" />
+          </span>
+          <span className="brand-text">
+            <strong>Навигатор</strong>
+            <small>для абитуриента</small>
+          </span>
+        </Link>
 
-        <form onSubmit={handleSubmit}>
-          <label>Имя</label>
-          <input
-            className="input"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-          />
+        <div>
+          <p className="kicker">Новый профиль</p>
+          <h1>Начните с короткой анкеты, а не с бесконечного каталога</h1>
+          <p className="lead">
+            После регистрации вы сможете пройти тест и получить объяснимый список программ.
+          </p>
+        </div>
+      </section>
 
-          <label>Email</label>
-          <input
-            className="input"
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            required
-          />
+      <section className="auth-card panel">
+        <h2>Регистрация</h2>
+        <p>Создайте аккаунт, чтобы сохранить прогресс и рекомендации.</p>
 
-          <label>Пароль</label>
-          <input
-            className="input"
-            name="password"
-            type="password"
-            value={form.password}
-            onChange={handleChange}
-            required
-          />
+        <form onSubmit={handleSubmit} className="stack-form">
+          <label>
+            Имя
+            <input className="input" name="name" value={form.name} onChange={handleChange} placeholder="Например: Алия" />
+          </label>
+
+          <label>
+            Email
+            <input className="input" name="email" type="email" value={form.email} onChange={handleChange} required />
+          </label>
+
+          <label>
+            Пароль
+            <input className="input" name="password" type="password" value={form.password} onChange={handleChange} required />
+          </label>
 
           {error && <p className="error">{error}</p>}
 
-          <button className="button" type="submit">
-            Зарегистрироваться
+          <button className="primary-button" type="submit" disabled={isLoading}>
+            {isLoading ? 'Создаем...' : 'Создать аккаунт'}
           </button>
         </form>
 
-        <p>
-          Уже есть аккаунт? <Link to="/login">Войти</Link>
+        <p className="auth-switch">
+          Уже есть аккаунт? <Link className="text-link" to="/login">Войти</Link>
         </p>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
