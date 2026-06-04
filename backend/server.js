@@ -13,6 +13,8 @@ const programsRoutes = require('./src/routes/programsRoutes');
 const testRoutes = require('./src/routes/testRoutes');
 const recommendationsRoutes = require('./src/routes/recommendationsRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
+const eventsRoutes = require('./src/routes/eventsRoutes');
+
 
 dotenv.config();
 
@@ -43,6 +45,7 @@ app.use('/api/programs', programsRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
 app.use('/admin', adminRoutes);
+app.use('/api/events', eventsRoutes);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
