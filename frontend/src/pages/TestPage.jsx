@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/axios';
+import { getTests, getTestById, submitTest } from '../api/test.api';
+import { useToast } from '../context/ToastContext';
+import Button from '../components/Button';
+import { Loader } from '../components/Spinner';
+import { EmptyState } from '../components/ui';
 
 function ProgressLine({ value }) {
   return (
@@ -12,6 +16,7 @@ function ProgressLine({ value }) {
 
 export default function TestPage() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const [test, setTest] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -20,76 +25,79 @@ export default function TestPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    loadTest();
-  }, []);
+  useEffect(() => { loadTest(); }, []);
 
   async function loadTest() {
     setIsLoading(true);
-
     try {
-      const testsResponse = await api.get('/api/test');
-      const firstTest = testsResponse.data[0];
+      const tests = await getTests();
+      const firstTest = tests[0];
 
       if (!firstTest) {
         setMessage('Тесты пока не добавлены');
         return;
       }
 
-      const testResponse = await api.get(`/api/test/${firstTest.id}`);
-
-      setTest(testResponse.data.test);
-      setQuestions(testResponse.data.questions);
-    } catch (error) {
-      setMessage(error.response?.data?.message || 'Не удалось загрузить тест');
+      const data = await getTestById(firstTest.id);
+      setTest(data.test);
+      setQuestions(data.questions);
+    } catch (err) {
+      setMessage(err.response?.data?.message || 'Не удалось загрузить тест');
     } finally {
       setIsLoading(false);
     }
   }
 
   function handleSelect(questionId, answerId) {
-    setSelectedAnswers({
-      ...selectedAnswers,
-      [questionId]: answerId
-    });
+    setSelectedAnswers(prev => ({ ...prev, [questionId]: answerId }));
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setMessage('');
 
     const answers = Object.values(selectedAnswers);
-
     if (answers.length !== questions.length) {
-      setMessage('Ответьте на все вопросы, чтобы завершить тест');
+      showToast({
+        tone: 'danger',
+        title: 'Не все вопросы отвечены',
+        description: `Осталось ответить: ${questions.length - answers.length}`
+      });
       return;
     }
 
     setIsSubmitting(true);
-
     try {
-      await api.post(`/api/test/${test.id}/submit`, { answers });
+      await submitTest(test.id, answers);
+      showToast({
+        title: 'Тест завершён',
+        description: 'Результаты сохранены. Перенаправляем на рекомендации.'
+      });
       navigate('/results');
-    } catch (error) {
-      setMessage(error.response?.data?.message || 'Не удалось отправить тест');
+    } catch (err) {
+      showToast({
+        tone: 'danger',
+        title: 'Ошибка',
+        description: err.response?.data?.message || 'Не удалось отправить тест'
+      });
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  const answeredCount = Object.keys(selectedAnswers).length;
+
   const progress = useMemo(() => {
     if (questions.length === 0) return 0;
-    return Math.round((Object.keys(selectedAnswers).length / questions.length) * 100);
-  }, [questions, selectedAnswers]);
+    return Math.round((answeredCount / questions.length) * 100);
+  }, [questions.length, answeredCount]);
 
   if (isLoading) {
     return (
       <main className="page">
-        <section className="panel loading-panel">
-          <div className="skeleton-line short" />
-          <div className="skeleton-line long" />
-          <div className="skeleton-row" />
-        </section>
+        <Loader
+          title="Загружаем тест"
+          description="Готовим вопросы профориентации — займёт секунду."
+        />
       </main>
     );
   }
@@ -97,11 +105,11 @@ export default function TestPage() {
   if (!test) {
     return (
       <main className="page">
-        <section className="empty-state panel">
-          <p className="kicker">Профориентация</p>
-          <h2>{message || 'Тест недоступен'}</h2>
-          <p>Администратор сможет добавить вопросы в панели управления.</p>
-        </section>
+        <EmptyState
+          eyebrow="Профориентация"
+          title={message || 'Тест недоступен'}
+          description="Администратор сможет добавить вопросы в панели управления."
+        />
       </main>
     );
   }
@@ -121,7 +129,7 @@ export default function TestPage() {
             <strong>{progress}%</strong>
           </div>
           <ProgressLine value={progress} />
-          <p>{Object.keys(selectedAnswers).length} из {questions.length} вопросов</p>
+          <p>{answeredCount} из {questions.length} вопросов</p>
         </aside>
       </section>
 
@@ -136,9 +144,11 @@ export default function TestPage() {
             <div className="answer-list">
               {question.answers.map(answer => {
                 const isSelected = selectedAnswers[question.id] === answer.id;
-
                 return (
-                  <label className={`answer-option ${isSelected ? 'selected' : ''}`} key={answer.id}>
+                  <label
+                    key={answer.id}
+                    className={`answer-option ${isSelected ? 'selected' : ''}`}
+                  >
                     <input
                       type="radio"
                       name={`question-${question.id}`}
@@ -158,12 +168,10 @@ export default function TestPage() {
             <strong>Готово на {progress}%</strong>
             <p>После отправки система обновит рекомендации.</p>
           </div>
-          <button className="primary-button" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Отправляем...' : 'Завершить тест'}
-          </button>
+          <Button type="submit" isLoading={isSubmitting} size="lg">
+            Завершить тест
+          </Button>
         </div>
-
-        {message && <p className="notice error">{message}</p>}
       </form>
     </main>
   );

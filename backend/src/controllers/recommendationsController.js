@@ -83,14 +83,34 @@ async function generateRecommendations(req, res) {
         };
       })
       .sort((a, b) => b.score - a.score);
+      
+  const seen = new Map();
 
-    let recommendations = scoredRecommendations.filter(item => item.score > 0);
-
-    if (recommendations.length === 0) {
-      recommendations = scoredRecommendations.slice(0, 5);
+  for (const item of scoredRecommendations) {
+    if (!seen.has(item.specialty_id)) {
+      seen.set(item.specialty_id, item);
     } else {
-      recommendations = recommendations.slice(0, 5);
+      const existing = seen.get(item.specialty_id);
+      // Предпочитаем грант, затем меньшую стоимость
+      if (!existing.has_grant && item.has_grant) {
+        seen.set(item.specialty_id, item);
+      } else if (existing.has_grant === item.has_grant) {
+        if ((item.tuition_fee || Infinity) < (existing.tuition_fee || Infinity)) {
+          seen.set(item.specialty_id, item);
+        }
+      }
     }
+  }
+
+  const deduplicated = Array.from(seen.values());
+
+  let recommendations = deduplicated.filter(item => item.score > 0);
+
+  if (recommendations.length === 0) {
+    recommendations = deduplicated.slice(0, 5);
+  } else {
+    recommendations = recommendations.slice(0, 5);
+  }
 
     await pool.query(
       'DELETE FROM recommendations WHERE user_id = $1',

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import api from '../api/axios';
+import { useToast } from '../context/ToastContext';
 
 const statLabels = {
   users: 'Пользователи',
@@ -21,14 +22,6 @@ function normalize(value) {
   return String(value || '').trim().toLowerCase();
 }
 
-function Message({ text }) {
-  if (!text) return null;
-
-  const isError = text.includes('существует') || text.includes('ошибка') || text.includes('Ошибка');
-
-  return <p className={isError ? 'error' : 'success'}>{text}</p>;
-}
-
 function AdminStat({ label, value }) {
   return (
     <div className="admin-stat">
@@ -38,11 +31,10 @@ function AdminStat({ label, value }) {
   );
 }
 
+
+
 export default function AdminPage() {
   const [stats, setStats] = useState(null);
-  const [institutions, setInstitutions] = useState([]);
-  const [specialties, setSpecialties] = useState([]);
-  const [programs, setPrograms] = useState([]);
   const [editingInstitutionId, setEditingInstitutionId] = useState(null);
   const [editingSpecialtyId, setEditingSpecialtyId] = useState(null);
   const [editingProgramId, setEditingProgramId] = useState(null);
@@ -50,9 +42,11 @@ export default function AdminPage() {
   const specialtyFormRef = useRef(null);
   const programFormRef = useRef(null);
 
-  const [institutionMessage, setInstitutionMessage] = useState('');
-  const [specialtyMessage, setSpecialtyMessage] = useState('');
-  const [programMessage, setProgramMessage] = useState('');
+  const [institutions, setInstitutions] = useState([]);
+  const [specialties, setSpecialties] = useState([]);
+  const [programs, setPrograms] = useState([]);
+  const { showToast } = useToast();
+
 
   const [institution, setInstitution] = useState({
     name: '',
@@ -139,7 +133,7 @@ export default function AdminPage() {
 
   async function createInstitution(event) {
     event.preventDefault();
-    setInstitutionMessage('');
+    showToast('');
 
     const exists = institutions.some(item =>
       item.id !== editingInstitutionId &&
@@ -149,7 +143,7 @@ export default function AdminPage() {
     );
 
     if (exists) {
-      setInstitutionMessage('Такое учебное заведение уже существует');
+      showToast({tone: 'danger', text: 'Такое учебное заведение уже существует'});
       return;
     }
 
@@ -158,20 +152,20 @@ export default function AdminPage() {
         ? await api.put(`/admin/institutions/${editingInstitutionId}`, institution)
         : await api.post('/admin/institutions', institution);
 
-      setInstitutionMessage(response.data.message || 'Учебное заведение сохранено');
+      showToast({tone: 'success', text: response.data.message || 'Учебное заведение сохранено'});
       setEditingInstitutionId(null);
       setInstitution({ name: '', type: 'college', city: '', address: '', website: '', description: '' });
 
       await loadStats();
       await loadCatalogData();
     } catch (error) {
-      setInstitutionMessage(error.response?.data?.message || 'Ошибка сохранения учебного заведения');
+      showToast({tone: 'danger', text: error.response?.data?.message || 'Ошибка сохранения учебного заведения'});
     }
   }
 
   async function createSpecialty(event) {
     event.preventDefault();
-    setSpecialtyMessage('');
+    showToast('');
 
     const exists = specialties.some(item =>
       item.id !== editingSpecialtyId &&
@@ -180,7 +174,7 @@ export default function AdminPage() {
     );
 
     if (exists) {
-      setSpecialtyMessage('Такая специальность уже существует');
+      showToast({tone: 'danger', text: 'Такая специальность уже существует'});
       return;
     }
 
@@ -196,7 +190,7 @@ export default function AdminPage() {
         ? await api.put(`/admin/specialties/${editingSpecialtyId}`, payload)
         : await api.post('/admin/specialties', payload);
 
-      setSpecialtyMessage(response.data.message || 'Специальность сохранена');
+      showToast({tone: 'success', text: response.data.message || 'Специальность сохранена'});
       setEditingSpecialtyId(null);
       setSpecialty({
         title: '',
@@ -214,13 +208,13 @@ export default function AdminPage() {
       await loadStats();
       await loadCatalogData();
     } catch (error) {
-      setSpecialtyMessage(error.response?.data?.message || 'Ошибка сохранения специальности');
+      showToast({tone: 'danger', text: error.response?.data?.message || 'Ошибка сохранения специальности'});
     }
   }
 
   async function createProgram(event) {
     event.preventDefault();
-    setProgramMessage('');
+    showToast('');
 
     const exists = programs.some(item =>
       item.id !== editingProgramId &&
@@ -229,7 +223,7 @@ export default function AdminPage() {
     );
 
     if (exists) {
-      setProgramMessage('Такая программа уже существует');
+      showToast({tone: 'danger', text: 'Такая программа уже существует'});
       return;
     }
 
@@ -248,7 +242,7 @@ export default function AdminPage() {
         ? await api.put(`/admin/programs/${editingProgramId}`, payload)
         : await api.post('/admin/programs', payload);
 
-      setProgramMessage(response.data.message || 'Программа сохранена');
+      showToast({tone: 'success', text: response.data.message || 'Программа сохранена'});
       setEditingProgramId(null);
       setProgram({
         institutionId: '',
@@ -265,7 +259,7 @@ export default function AdminPage() {
       await loadStats();
       await loadCatalogData();
     } catch (error) {
-      setProgramMessage(error.response?.data?.message || 'Ошибка сохранения программы');
+      showToast({tone: 'danger', text: error.response?.data?.message || 'Ошибка сохранения программы'});
     }
   }
 
@@ -279,7 +273,7 @@ export default function AdminPage() {
       website: item.website || '',
       description: item.description || ''
     });
-    setInstitutionMessage('Редактирование учебного заведения');
+    showToast({tone: 'info', text: 'Редактирование учебного заведения'});
     scrollToForm(institutionFormRef);
   }
 
@@ -288,11 +282,11 @@ export default function AdminPage() {
 
     try {
       const response = await api.delete(`/admin/institutions/${id}`);
-      setInstitutionMessage(response.data.message || 'Учебное заведение удалено');
+      showToast({tone: 'success', text: 'Учебное заведение удалено'});
       await loadStats();
       await loadCatalogData();
     } catch (error) {
-      setInstitutionMessage(error.response?.data?.message || 'Ошибка удаления учебного заведения');
+      showToast({tone: 'danger', text: error.response?.data?.message || 'Ошибка удаления учебного заведения'});
     }
   }
 
@@ -310,7 +304,7 @@ export default function AdminPage() {
       demandLevel: item.demand_level || '',
       tags: (item.tags || []).join(', ')
     });
-    setSpecialtyMessage('Редактирование специальности');
+    showToast({tone: 'info', text: 'Редактирование специальности'});
     scrollToForm(specialtyFormRef);
   }
 
@@ -319,11 +313,11 @@ export default function AdminPage() {
 
     try {
       const response = await api.delete(`/admin/specialties/${id}`);
-      setSpecialtyMessage(response.data.message || 'Специальность удалена');
+      showToast({tone: 'success', text: 'Специальность удалена'});
       await loadStats();
       await loadCatalogData();
     } catch (error) {
-      setSpecialtyMessage(error.response?.data?.message || 'Ошибка удаления специальности');
+      showToast({tone: 'danger', text: error.response?.data?.message || 'Ошибка удаления специальности'});
     }
   }
 
@@ -340,7 +334,7 @@ export default function AdminPage() {
       minScore: item.min_score || '',
       hasGrant: Boolean(item.has_grant)
     });
-    setProgramMessage('Редактирование программы');
+    showToast({tone: 'info', text: 'Редактирование программы'});
     scrollToForm(programFormRef);
   }
 
@@ -349,11 +343,11 @@ export default function AdminPage() {
 
     try {
       const response = await api.delete(`/admin/programs/${id}`);
-      setProgramMessage(response.data.message || 'Программа удалена');
+      showToast({tone: 'success', text: 'Программа удалена'});
       await loadStats();
       await loadCatalogData();
     } catch (error) {
-      setProgramMessage(error.response?.data?.message || 'Ошибка удаления программы');
+      showToast({tone: 'danger', text: error.response?.data?.message || 'Ошибка удаления программы'});
     }
   }
 
@@ -395,7 +389,6 @@ export default function AdminPage() {
             <label>Сайт<input className="input" name="website" value={institution.website} onChange={changeInstitution} /></label>
             <label>Описание<textarea className="textarea" name="description" value={institution.description} onChange={changeInstitution} rows="3" /></label>
             <button className="primary-button" type="submit">{editingInstitutionId ? 'Сохранить изменения' : 'Добавить'}</button>
-            <Message text={institutionMessage} />
           </form>
         </article>
 
@@ -420,7 +413,6 @@ export default function AdminPage() {
             <label>Востребованность<input className="input" name="demandLevel" value={specialty.demandLevel} onChange={changeSpecialty} /></label>
             <label>Теги через запятую<input className="input" name="tags" value={specialty.tags} onChange={changeSpecialty} /></label>
             <button className="primary-button" type="submit">{editingSpecialtyId ? 'Сохранить изменения' : 'Добавить'}</button>
-            <Message text={specialtyMessage} />
           </form>
         </article>
 
@@ -460,7 +452,6 @@ export default function AdminPage() {
               Есть грант
             </label>
             <button className="primary-button" type="submit">{editingProgramId ? 'Сохранить изменения' : 'Добавить'}</button>
-            <Message text={programMessage} />
           </form>
         </article>
       </section>

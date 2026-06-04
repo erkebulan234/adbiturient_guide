@@ -1,8 +1,61 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/axios';
+import { getProfile, saveProfile } from '../api/profile.api';
+import { getTestResults } from '../api/test.api';
+import { getRecommendations } from '../api/recommendations.api';
+import { useToast } from '../context/ToastContext';
+import Button from '../components/Button';
+import Input, { Select, Textarea } from '../components/Input';
 
-const profileFields = ['city', 'interests', 'subjects', 'skills', 'careerGoals'];
+const PROFILE_FIELDS = ['city', 'interests', 'subjects', 'skills', 'careerGoals'];
+
+
+function OnboardingBanner({ onDismiss }) {
+  return (
+    <section className="panel" style={{
+      background: 'linear-gradient(135deg, #2f5f4f 0%, #1a3d30 100%)',
+      color: '#fff',
+      padding: '28px 32px',
+      marginBottom: 24,
+      position: 'relative'
+    }}>
+      <p className="kicker" style={{ color: 'rgba(255,255,255,0.7)' }}>Добро пожаловать</p>
+      <h2 style={{ color: '#fff', marginBottom: 8 }}>Три шага до персонального подбора</h2>
+      <p style={{ color: 'rgba(255,255,255,0.75)', maxWidth: 560, marginBottom: 20 }}>
+        Заполните анкету, пройдите тест и получите список подходящих программ
+        с объяснением почему они вам подходят.
+      </p>
+
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.12)', padding: '8px 14px', borderRadius: 999 }}>
+          <span style={{ fontWeight: 800 }}>1</span>
+          <span style={{ fontSize: 14 }}>Заполните анкету ниже</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.12)', padding: '8px 14px', borderRadius: 999 }}>
+          <span style={{ fontWeight: 800 }}>2</span>
+          <span style={{ fontSize: 14 }}>Пройдите тест</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.12)', padding: '8px 14px', borderRadius: 999 }}>
+          <span style={{ fontWeight: 800 }}>3</span>
+          <span style={{ fontSize: 14 }}>Получите рекомендации</span>
+        </div>
+      </div>
+
+      <button
+        onClick={onDismiss}
+        style={{
+          position: 'absolute', top: 16, right: 16,
+          background: 'rgba(255,255,255,0.15)',
+          border: 'none', borderRadius: 999,
+          color: '#fff', cursor: 'pointer',
+          padding: '6px 12px', fontSize: 13, fontWeight: 700
+        }}
+      >
+        Понятно ×
+      </button>
+    </section>
+  );
+}
 
 function ProgressLine({ value }) {
   return (
@@ -40,7 +93,13 @@ function NextStep({ number, title, description, complete, to, action }) {
   );
 }
 
+function splitText(value) {
+  return value.split(',').map(item => item.trim()).filter(Boolean);
+}
+
 export default function ProfilePage() {
+  const { showToast } = useToast();
+
   const [form, setForm] = useState({
     educationLevel: 'grade_9',
     city: '',
@@ -49,11 +108,19 @@ export default function ProfilePage() {
     skills: '',
     careerGoals: ''
   });
-
-  const [message, setMessage] = useState('');
   const [testResults, setTestResults] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
+
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return localStorage.getItem('onboarding_dismissed') !== 'true';
+  });
+
+  function dismissOnboarding() {
+    localStorage.setItem('onboarding_dismissed', 'true');
+    setShowOnboarding(false);
+  }
+
 
   useEffect(() => {
     loadProfile();
@@ -62,58 +129,45 @@ export default function ProfilePage() {
 
   async function loadProfile() {
     try {
-      const response = await api.get('/api/profile');
-
-      if (response.data) {
+      const data = await getProfile();
+      if (data) {
         setForm({
-          educationLevel: response.data.education_level || 'grade_9',
-          city: response.data.city || '',
-          interests: (response.data.interests || []).join(', '),
-          subjects: (response.data.subjects || []).join(', '),
-          skills: (response.data.skills || []).join(', '),
-          careerGoals: response.data.career_goals || ''
+          educationLevel: data.education_level || 'grade_9',
+          city: data.city || '',
+          interests: (data.interests || []).join(', '),
+          subjects: (data.subjects || []).join(', '),
+          skills: (data.skills || []).join(', '),
+          careerGoals: data.career_goals || ''
         });
       }
-    } catch (error) {
-      console.log(error);
+    } catch (err) {
+      console.error(err);
     }
   }
 
   async function loadProgress() {
     try {
-      const [testResponse, recommendationsResponse] = await Promise.all([
-        api.get('/api/test/results'),
-        api.get('/api/recommendations')
+      const [tests, recs] = await Promise.all([
+        getTestResults(),
+        getRecommendations()
       ]);
-
-      setTestResults(testResponse.data);
-      setRecommendations(recommendationsResponse.data);
-    } catch (error) {
-      console.log(error);
+      setTestResults(Array.isArray(tests) ? tests : []);
+      setRecommendations(Array.isArray(recs) ? recs : []);
+    } catch (err) {
+      console.error(err);
     }
   }
 
   function handleChange(event) {
-    setForm({
-      ...form,
-      [event.target.name]: event.target.value
-    });
-  }
-
-  function splitText(value) {
-    return value
-      .split(',')
-      .map(item => item.trim())
-      .filter(Boolean);
+    const { name, value } = event.target;
+    setForm(prev => ({ ...prev, [name]: value }));
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setMessage('');
     setIsSaving(true);
-
     try {
-      await api.post('/api/profile', {
+      await saveProfile({
         educationLevel: form.educationLevel,
         city: form.city,
         interests: splitText(form.interests),
@@ -121,19 +175,25 @@ export default function ProfilePage() {
         skills: splitText(form.skills),
         careerGoals: form.careerGoals
       });
-
-      setMessage('Анкета сохранена. Теперь рекомендации будут точнее.');
+      showToast({
+        title: 'Анкета сохранена',
+        description: 'Теперь рекомендации будут точнее.'
+      });
       await loadProgress();
-    } catch (error) {
-      setMessage(error.response?.data?.message || 'Не удалось сохранить анкету');
+    } catch (err) {
+      showToast({
+        tone: 'danger',
+        title: 'Ошибка',
+        description: err.response?.data?.message || 'Не удалось сохранить анкету'
+      });
     } finally {
       setIsSaving(false);
     }
   }
 
   const completion = useMemo(() => {
-    const filled = profileFields.filter(field => String(form[field] || '').trim()).length;
-    return Math.round((filled / profileFields.length) * 100);
+    const filled = PROFILE_FIELDS.filter(f => String(form[f] || '').trim()).length;
+    return Math.round((filled / PROFILE_FIELDS.length) * 100);
   }, [form]);
 
   const hasProfile = completion >= 60;
@@ -142,12 +202,16 @@ export default function ProfilePage() {
 
   return (
     <main className="page">
+      {showOnboarding && !hasProfile && !hasTest && (
+        <OnboardingBanner onDismiss={dismissOnboarding} />
+      )}
       <section className="intro-section">
         <div>
           <p className="kicker">Поступление без лишнего шума</p>
           <h1>Соберите понятный профиль и получите осмысленный подбор программ</h1>
           <p className="lead">
-            Навигатор связывает ваши интересы, предметы, навыки и карьерную цель с реальными колледжами и университетами Казахстана.
+            Навигатор связывает ваши интересы, предметы, навыки и карьерную цель
+            с реальными колледжами и университетами Казахстана.
           </p>
         </div>
 
@@ -157,22 +221,19 @@ export default function ProfilePage() {
             <strong>{completion}%</strong>
           </div>
           <ProgressLine value={completion} />
-          <p>
-            Чем точнее анкета, тем меньше случайных вариантов в рекомендациях.
-          </p>
+          <p>Чем точнее анкета, тем меньше случайных вариантов в рекомендациях.</p>
         </div>
       </section>
 
       <section className="overview-grid">
-        <OverviewStat label="Анкета" value={`${completion}%`} note="заполнено" />
-        <OverviewStat label="Тест" value={hasTest ? 'Пройден' : 'Не пройден'} note={`${testResults.length} ответов`} />
-        <OverviewStat label="Подбор" value={recommendations.length} note="рекомендаций" />
+        <OverviewStat label="Анкета"  value={`${completion}%`}        note="заполнено"      />
+        <OverviewStat label="Тест"    value={hasTest ? 'Пройден' : '–'} note={`${testResults.length} результатов`} />
+        <OverviewStat label="Подбор"  value={recommendations.length}   note="рекомендаций"  />
       </section>
 
       <section className="workspace-grid">
         <aside className="panel">
           <p className="kicker">Следующие шаги</p>
-
           <div className="steps-list">
             <NextStep
               number="1"
@@ -182,7 +243,6 @@ export default function ProfilePage() {
               to="/profile"
               action={hasProfile ? 'Уточнить данные' : 'Заполнить анкету'}
             />
-
             <NextStep
               number="2"
               title="Профориентация"
@@ -191,7 +251,6 @@ export default function ProfilePage() {
               to="/test"
               action={hasTest ? 'Пройти заново' : 'Начать тест'}
             />
-
             <NextStep
               number="3"
               title="Рекомендации"
@@ -208,56 +267,73 @@ export default function ProfilePage() {
             <div>
               <p className="kicker">Профиль</p>
               <h2>Анкета абитуриента</h2>
-              <p>Заполните только то, что действительно помогает системе понять ваш образовательный контекст.</p>
+              <p>
+                Заполните только то, что действительно помогает системе понять
+                ваш образовательный контекст.
+              </p>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="form-grid">
-            <label>
-              Куда поступаете?
-              <select className="select" name="educationLevel" value={form.educationLevel} onChange={handleChange}>
-                <option value="grade_9">После 9 класса — колледж</option>
-                <option value="grade_11">После 11 класса — университет</option>
-              </select>
-            </label>
+          <form onSubmit={handleSubmit} className="form-grid" noValidate>
+            <Select
+              label="Куда поступаете?"
+              name="educationLevel"
+              value={form.educationLevel}
+              onChange={handleChange}
+            >
+              <option value="grade_9">После 9 класса — колледж</option>
+              <option value="grade_11">После 11 класса — университет</option>
+            </Select>
 
-            <label>
-              Город
-              <input className="input" name="city" value={form.city} onChange={handleChange} placeholder="Например: Алматы" />
-            </label>
+            <Input
+              label="Город"
+              name="city"
+              value={form.city}
+              onChange={handleChange}
+              placeholder="Например: Алматы"
+            />
 
-            <label>
-              Интересы
-              <input className="input" name="interests" value={form.interests} onChange={handleChange} placeholder="IT, медицина, дизайн" />
-            </label>
+            <Input
+              label="Интересы"
+              name="interests"
+              value={form.interests}
+              onChange={handleChange}
+              placeholder="IT, медицина, дизайн"
+              hint="Перечислите через запятую"
+            />
 
-            <label>
-              Любимые предметы
-              <input className="input" name="subjects" value={form.subjects} onChange={handleChange} placeholder="математика, биология, информатика" />
-            </label>
+            <Input
+              label="Любимые предметы"
+              name="subjects"
+              value={form.subjects}
+              onChange={handleChange}
+              placeholder="математика, биология, информатика"
+              hint="Перечислите через запятую"
+            />
 
-            <label>
-              Навыки
-              <input className="input" name="skills" value={form.skills} onChange={handleChange} placeholder="анализ, коммуникация, логика" />
-            </label>
+            <Input
+              label="Навыки"
+              name="skills"
+              value={form.skills}
+              onChange={handleChange}
+              placeholder="анализ, коммуникация, логика"
+              hint="Перечислите через запятую"
+            />
 
-            <label className="wide">
-              Карьерная цель
-              <textarea
-                className="textarea"
-                name="careerGoals"
-                value={form.careerGoals}
-                onChange={handleChange}
-                rows="4"
-                placeholder="Например: хочу стать разработчиком образовательных сервисов"
-              />
-            </label>
+            <Textarea
+              label="Карьерная цель"
+              name="careerGoals"
+              value={form.careerGoals}
+              onChange={handleChange}
+              rows={4}
+              placeholder="Например: хочу стать разработчиком образовательных сервисов"
+              className="wide"
+            />
 
             <div className="form-actions wide">
-              <button className="primary-button" type="submit" disabled={isSaving}>
-                {isSaving ? 'Сохраняем...' : 'Сохранить анкету'}
-              </button>
-              {message && <p className={message.includes('удалось') ? 'error' : 'success'}>{message}</p>}
+              <Button type="submit" isLoading={isSaving} size="lg">
+                Сохранить анкету
+              </Button>
             </div>
           </form>
         </section>

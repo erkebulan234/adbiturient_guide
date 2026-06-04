@@ -1,8 +1,71 @@
+const SYNONYMS = {
+  // IT
+  'программирование': 'it',
+  'кодинг': 'it',
+  'разработка': 'it',
+  'информатика': 'it',
+  'it': 'it',
+  'технологии': 'it',
+  'робототехника': 'it',
+  'веб': 'it',
+  '软件': 'it',
+
+  // Медицина
+  'биология': 'медицина',
+  'химия': 'медицина',
+  'медицина': 'медицина',
+  'здоровье': 'медицина',
+  'лечение': 'медицина',
+  'фармация': 'медицина',
+
+  // Математика
+  'математика': 'математика',
+  'алгебра': 'математика',
+  'геометрия': 'математика',
+  'физика': 'математика',
+  'анализ': 'математика',
+
+  // Дизайн / творчество
+  'дизайн': 'творчество',
+  'творчество': 'творчество',
+  'рисование': 'творчество',
+  'искусство': 'творчество',
+  'архитектура': 'творчество',
+  'креативность': 'творчество',
+
+  // Бизнес
+  'экономика': 'бизнес',
+  'финансы': 'бизнес',
+  'бизнес': 'бизнес',
+  'менеджмент': 'бизнес',
+  'маркетинг': 'бизнес',
+  'бухгалтерия': 'бизнес',
+
+  // Право
+  'право': 'юриспруденция',
+  'юриспруденция': 'юриспруденция',
+  'закон': 'юриспруденция',
+  'юридический': 'юриспруденция',
+
+  // Soft skills
+  'логика': 'аналитика',
+  'аналитика': 'аналитика',
+  'анализ данных': 'аналитика',
+  'общение': 'коммуникация',
+  'коммуникация': 'коммуникация',
+  'командная работа': 'коммуникация',
+  'ответственность': 'коммуникация',
+};
+
+function applysynonyms(word) {
+  return SYNONYMS[word] || word;
+}
+
 function normalizeArray(value) {
   if (!Array.isArray(value)) return [];
 
   return value
-    .map(item => String(item).toLowerCase().trim())
+    .map(item => applysynonyms(String(item).toLowerCase().trim()))
     .filter(Boolean);
 }
 
@@ -33,11 +96,20 @@ function cosineSimilarity(vectorA, vectorB) {
 }
 
 function calculateScore(profile, specialty, testTags = []) {
+  const careerWords = profile.career_goals
+    ? profile.career_goals
+        .toLowerCase()
+        .replace(/[.,!?;:]/g, '')
+        .split(/\s+/)
+        .filter(w => w.length > 3)
+    : [];
+
   const userWords = [
     ...normalizeArray(profile.interests),
     ...normalizeArray(profile.subjects),
     ...normalizeArray(profile.skills),
-    ...normalizeArray(testTags)
+    ...normalizeArray(testTags),
+    ...careerWords
   ];
 
   const specialtyWords = [
@@ -46,11 +118,13 @@ function calculateScore(profile, specialty, testTags = []) {
     ...normalizeArray(specialty.required_skills)
   ];
 
-  const vocabulary = buildVocabulary(userWords, specialtyWords);
+  if (userWords.length === 0) {
+    return 0;
+  }
 
+  const vocabulary = buildVocabulary(userWords, specialtyWords);
   const userVector = buildVector(userWords, vocabulary);
   const specialtyVector = buildVector(specialtyWords, vocabulary);
-
   const similarity = cosineSimilarity(userVector, specialtyVector);
 
   return Math.round(similarity * 100);
@@ -63,6 +137,14 @@ function buildReason(profile, specialty, score, testTags = []) {
   const subjects = normalizeArray(profile.subjects);
   const skills = normalizeArray(profile.skills);
   const normalizedTestTags = normalizeArray(testTags);
+
+  const careerWords = profile.career_goals
+    ? profile.career_goals
+        .toLowerCase()
+        .replace(/[.,!?;:]/g, '')
+        .split(/\s+/)
+        .filter(w => w.length > 3)
+    : [];
 
   const tags = normalizeArray(specialty.tags);
   const requiredSubjects = normalizeArray(specialty.required_subjects);
@@ -86,6 +168,14 @@ function buildReason(profile, specialty, score, testTags = []) {
     normalizedTestTags.some(item => requiredSkills.includes(item))
   ) {
     reasons.push('результаты теста подтверждают выбор');
+  }
+
+  if (careerWords.some(word =>
+    tags.includes(word) ||
+    requiredSubjects.includes(word) ||
+    requiredSkills.includes(word)
+  )) {
+    reasons.push('карьерная цель совпадает с направлением');
   }
 
   if (reasons.length === 0) {

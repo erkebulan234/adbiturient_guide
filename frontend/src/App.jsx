@@ -11,6 +11,8 @@ import AdminPage from './pages/AdminPage';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { useAuth } from './context/AuthContext.jsx';
+import NotFoundPage from './pages/NotFoundPage';
+
 
 export default function App() {
   const { user } = useAuth();
@@ -68,6 +70,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route path="*" element={<NotFoundPage />} />
 
       </Routes>
     </>

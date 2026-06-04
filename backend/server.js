@@ -1,7 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
+const errorHandler = require('./src/middleware/errorHandler');
 const authRoutes = require('./src/routes/authRoutes');
 const profileRoutes = require('./src/routes/profileRoutes');
 const institutionsRoutes = require('./src/routes/institutionsRoutes');
@@ -15,13 +18,23 @@ dotenv.config();
 
 const app = express();
 
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 минут
+  max: 10, // максимум 10 запросов
+  message: { message: 'Слишком много попыток. Попробуйте через 15 минут.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Backend работает' });
 });
 
+app.use('/auth', authLimiter);
 app.use('/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/institutions', institutionsRoutes);
@@ -30,6 +43,7 @@ app.use('/api/programs', programsRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
 app.use('/admin', adminRoutes);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 

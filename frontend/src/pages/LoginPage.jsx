@@ -1,44 +1,50 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import api from '../api/axios';
+import { login } from '../api/auth.api';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useToast } from '../context/ToastContext';
+import Button from '../components/Button';
+import Input from '../components/Input';
 import logoMark from '../assets/navigator-logo-mark.png';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { setUser } = useAuth();
+  const { showToast } = useToast();
   const redirectTo = location.state?.from || '/profile';
 
-  const [form, setForm] = useState({
-    email: '',
-    password: ''
-  });
-
-  const [error, setError] = useState('');
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
   function handleChange(event) {
-    setForm({
-      ...form,
-      [event.target.name]: event.target.value
-    });
+    const { name, value } = event.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+  }
+
+  function validate() {
+    const next = {};
+    if (!form.email) next.email = 'Введите email';
+    if (!form.password) next.password = 'Введите пароль';
+    return next;
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setError('');
+    const next = validate();
+    if (Object.keys(next).length) { setErrors(next); return; }
+
     setIsLoading(true);
-
     try {
-      const response = await api.post('/auth/login', form);
-
-      localStorage.setItem('token', response.data.token);
-      setUser(response.data.user);
-
+      const data = await login(form.email, form.password);
+      localStorage.setItem('token', data.token);
+      setUser(data.user);
       navigate(redirectTo, { replace: true });
-    } catch (error) {
-      setError(error.response?.data?.message || 'Не удалось войти');
+    } catch (err) {
+      const message = err.response?.data?.message || 'Не удалось войти';
+      showToast({ tone: 'danger', title: 'Ошибка входа', description: message });
     } finally {
       setIsLoading(false);
     }
@@ -70,26 +76,36 @@ export default function LoginPage() {
         <h2>Вход</h2>
         <p>Используйте email и пароль, указанные при регистрации.</p>
 
-        <form onSubmit={handleSubmit} className="stack-form">
-          <label>
-            Email
-            <input className="input" name="email" type="email" value={form.email} onChange={handleChange} required />
-          </label>
+        <form onSubmit={handleSubmit} className="stack-form" noValidate>
+          <Input
+            label="Email"
+            name="email"
+            type="email"
+            value={form.email}
+            onChange={handleChange}
+            error={errors.email}
+            autoComplete="email"
+            autoFocus
+          />
 
-          <label>
-            Пароль
-            <input className="input" name="password" type="password" value={form.password} onChange={handleChange} required />
-          </label>
+          <Input
+            label="Пароль"
+            name="password"
+            type="password"
+            value={form.password}
+            onChange={handleChange}
+            error={errors.password}
+            autoComplete="current-password"
+          />
 
-          {error && <p className="error">{error}</p>}
-
-          <button className="primary-button" type="submit" disabled={isLoading}>
-            {isLoading ? 'Входим...' : 'Войти'}
-          </button>
+          <Button type="submit" isLoading={isLoading} size="lg">
+            Войти
+          </Button>
         </form>
 
         <p className="auth-switch">
-          Нет аккаунта? <Link className="text-link" to="/register">Зарегистрироваться</Link>
+          Нет аккаунта?{' '}
+          <Link className="text-link" to="/register">Зарегистрироваться</Link>
         </p>
       </section>
     </main>

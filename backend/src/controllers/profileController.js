@@ -1,5 +1,16 @@
 const pool = require('../config/db');
 
+const VALID_EDUCATION_LEVELS = ['grade_9', 'grade_11'];
+
+function sanitizeArray(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(item => typeof item === 'string')
+    .map(item => item.trim().slice(0, 100))
+    .filter(Boolean)
+    .slice(0, 20); // максимум 20 элементов
+}
+
 async function getProfile(req, res) {
   try {
     const result = await pool.query(
@@ -23,6 +34,26 @@ async function saveProfile(req, res) {
       skills,
       careerGoals
     } = req.body;
+
+    if (!educationLevel || !VALID_EDUCATION_LEVELS.includes(educationLevel)) {
+      return res.status(400).json({
+        message: 'Некорректный уровень образования'
+      });
+    }
+
+    if (city && typeof city !== 'string') {
+      return res.status(400).json({ message: 'Некорректный город' });
+    }
+
+    if (careerGoals && typeof careerGoals !== 'string') {
+      return res.status(400).json({ message: 'Некорректная карьерная цель' });
+    }
+
+    const cleanCity = city ? city.trim().slice(0, 120) : null;
+    const cleanGoals = careerGoals ? careerGoals.trim().slice(0, 500) : null;
+    const cleanInterests = sanitizeArray(interests);
+    const cleanSubjects = sanitizeArray(subjects);
+    const cleanSkills = sanitizeArray(skills);
 
     const result = await pool.query(
       `
@@ -49,11 +80,11 @@ async function saveProfile(req, res) {
       [
         req.user.id,
         educationLevel,
-        city,
-        interests || [],
-        subjects || [],
-        skills || [],
-        careerGoals || null
+        cleanCity,
+        cleanInterests,
+        cleanSubjects,
+        cleanSkills,
+        cleanGoals
       ]
     );
 

@@ -1,43 +1,54 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import api from '../api/axios';
+import { register } from '../api/auth.api';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useToast } from '../context/ToastContext';
+import Button from '../components/Button';
+import Input from '../components/Input';
 import logoMark from '../assets/navigator-logo-mark.png';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { setUser } = useAuth();
+  const { showToast } = useToast();
 
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    password: ''
-  });
-
-  const [error, setError] = useState('');
+  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
   function handleChange(event) {
-    setForm({
-      ...form,
-      [event.target.name]: event.target.value
-    });
+    const { name, value } = event.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+  }
+
+  function validate() {
+    const next = {};
+    if (!form.email) next.email = 'Введите email';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) next.email = 'Некорректный email';
+    if (!form.password) next.password = 'Введите пароль';
+    else if (form.password.length < 6) next.password = 'Минимум 6 символов';
+    return next;
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setError('');
+    const next = validate();
+    if (Object.keys(next).length) { setErrors(next); return; }
+
     setIsLoading(true);
-
     try {
-      const response = await api.post('/auth/register', form);
-
-      localStorage.setItem('token', response.data.token);
-      setUser(response.data.user);
-
+      const data = await register(form.name, form.email, form.password);
+      localStorage.setItem('token', data.token);
+      setUser(data.user);
+      showToast({ tone: 'success', title: 'Добро пожаловать!', description: 'Аккаунт создан. Заполните анкету.' });
       navigate('/profile');
-    } catch (error) {
-      setError(error.response?.data?.message || 'Не удалось создать аккаунт');
+    } catch (err) {
+      const message = err.response?.data?.message || 'Не удалось создать аккаунт';
+      showToast({ tone: 'danger', title: 'Ошибка регистрации', description: message });
+      if (message.toLowerCase().includes('существует')) {
+        setErrors({ email: 'Этот email уже зарегистрирован' });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -69,31 +80,47 @@ export default function RegisterPage() {
         <h2>Регистрация</h2>
         <p>Создайте аккаунт, чтобы сохранить прогресс и рекомендации.</p>
 
-        <form onSubmit={handleSubmit} className="stack-form">
-          <label>
-            Имя
-            <input className="input" name="name" value={form.name} onChange={handleChange} placeholder="Например: Алия" />
-          </label>
+        <form onSubmit={handleSubmit} className="stack-form" noValidate>
+          <Input
+            label="Имя"
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            placeholder="Например: Алия"
+            hint="Необязательно"
+            autoComplete="name"
+            autoFocus
+          />
 
-          <label>
-            Email
-            <input className="input" name="email" type="email" value={form.email} onChange={handleChange} required />
-          </label>
+          <Input
+            label="Email"
+            name="email"
+            type="email"
+            value={form.email}
+            onChange={handleChange}
+            error={errors.email}
+            autoComplete="email"
+          />
 
-          <label>
-            Пароль
-            <input className="input" name="password" type="password" value={form.password} onChange={handleChange} required />
-          </label>
+          <Input
+            label="Пароль"
+            name="password"
+            type="password"
+            value={form.password}
+            onChange={handleChange}
+            error={errors.password}
+            hint="Минимум 6 символов"
+            autoComplete="new-password"
+          />
 
-          {error && <p className="error">{error}</p>}
-
-          <button className="primary-button" type="submit" disabled={isLoading}>
-            {isLoading ? 'Создаем...' : 'Создать аккаунт'}
-          </button>
+          <Button type="submit" isLoading={isLoading} size="lg">
+            Создать аккаунт
+          </Button>
         </form>
 
         <p className="auth-switch">
-          Уже есть аккаунт? <Link className="text-link" to="/login">Войти</Link>
+          Уже есть аккаунт?{' '}
+          <Link className="text-link" to="/login">Войти</Link>
         </p>
       </section>
     </main>
