@@ -12,7 +12,8 @@ async function getTests(req, res) {
 
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ message: 'Ошибка получения тестов', error: error.message });
+    console.error('getTests error:', error);
+    res.status(500).json({ message: 'Ошибка получения тестов' });
   }
 }
 
@@ -67,33 +68,101 @@ async function getTestById(req, res) {
       }
     }
 
-    res.json({
+    return res.json({
       test: testResult.rows[0],
       questions: Array.from(questionsMap.values())
     });
   } catch (error) {
-    res.status(500).json({ message: 'Ошибка получения теста', error: error.message });
+    console.error('getTestById error:', error);
+    return res.status(500).json({ message: 'Ошибка получения теста' });
   }
+}
+
+function normalizeAnswerIds(answers) {
+  if (!Array.isArray(answers) || answers.length === 0) {
+    const error = new Error('Ответы обязательны');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const answerIds = answers.map(Number);
+  const hasInvalidIds = answerIds.some(id => !Number.isInteger(id) || id <= 0);
+
+  if (hasInvalidIds) {
+    const error = new Error('Некорректный список ответов');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (new Set(answerIds).size !== answerIds.length) {
+    const error = new Error('Нельзя отправлять один и тот же ответ несколько раз');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return answerIds;
 }
 
 async function submitTest(req, res) {
   try {
-    const { answers } = req.body;
+    const testId = Number(req.params.id);
 
-    if (!Array.isArray(answers) || answers.length === 0) {
-      return res.status(400).json({ message: 'Ответы обязательны' });
+    if (!Number.isInteger(testId) || testId <= 0) {
+      return res.status(400).json({ message: 'Некорректный тест' });
     }
 
-    const answerIds = answers.map(Number);
+    const answerIds = normalizeAnswerIds(req.body.answers);
+
+    const questionsResult = await pool.query(
+      `
+      SELECT id
+      FROM questions
+      WHERE test_id = $1
+      ORDER BY id
+      `,
+      [testId]
+    );
+
+    if (questionsResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Тест не найден или в нем нет вопросов' });
+    }
 
     const answersResult = await pool.query(
       `
-      SELECT id, score, tag
-      FROM answers
-      WHERE id = ANY($1::int[])
+      SELECT
+        a.id,
+        a.question_id,
+        a.score,
+        a.tag
+      FROM answers a
+      JOIN questions q ON q.id = a.question_id
+      WHERE a.id = ANY($1::int[])
+        AND q.test_id = $2
       `,
-      [answerIds]
+      [answerIds, testId]
     );
+
+    if (answersResult.rows.length !== answerIds.length) {
+      return res.status(400).json({ message: 'Некоторые ответы не относятся к выбранному тесту' });
+    }
+
+    const expectedQuestionIds = questionsResult.rows.map(item => Number(item.id));
+    const answeredQuestionIds = answersResult.rows.map(item => Number(item.question_id));
+
+    if (answeredQuestionIds.length !== expectedQuestionIds.length) {
+      return res.status(400).json({ message: 'Ответьте на все вопросы теста' });
+    }
+
+    if (new Set(answeredQuestionIds).size !== answeredQuestionIds.length) {
+      return res.status(400).json({ message: 'Выберите только один ответ на каждый вопрос' });
+    }
+
+    const expectedSet = new Set(expectedQuestionIds);
+    const hasUnexpectedQuestion = answeredQuestionIds.some(id => !expectedSet.has(id));
+
+    if (hasUnexpectedQuestion) {
+      return res.status(400).json({ message: 'Ответы не соответствуют вопросам теста' });
+    }
 
     const totalScore = answersResult.rows.reduce(
       (sum, item) => sum + Number(item.score || 0),
@@ -115,18 +184,23 @@ async function submitTest(req, res) {
       `,
       [
         req.user.id,
-        req.params.id,
+        testId,
         resultTags,
         totalScore
       ]
     );
 
-    res.json({
+    return res.json({
       message: 'Тест завершён',
       result: result.rows[0]
     });
   } catch (error) {
-    res.status(500).json({ message: 'Ошибка сохранения результата теста', error: error.message });
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error('submitTest error:', error);
+    return res.status(500).json({ message: 'Ошибка сохранения результата теста' });
   }
 }
 
@@ -145,7 +219,8 @@ async function getMyResults(req, res) {
 
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ message: 'Ошибка получения результатов', error: error.message });
+    console.error('getMyResults error:', error);
+    res.status(500).json({ message: 'Ошибка получения результатов' });
   }
 }
 
@@ -153,5 +228,6 @@ module.exports = {
   getTests,
   getTestById,
   submitTest,
-  getMyResults
+  getMyResults,
+  _normalizeAnswerIds: normalizeAnswerIds
 };

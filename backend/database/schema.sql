@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS profiles (
   subjects TEXT[],
   skills TEXT[],
   career_goals TEXT,
+  ent_score INTEGER,
+  dislike_subjects TEXT[] DEFAULT '{}',
+  dislike_fields TEXT[] DEFAULT '{}',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -99,3 +102,24 @@ CREATE TABLE IF NOT EXISTS recommendations (
   reason TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS recommendation_events (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  recommendation_id INTEGER REFERENCES recommendations(id) ON DELETE SET NULL,
+  program_id INTEGER REFERENCES programs(id) ON DELETE SET NULL,
+  specialty_id INTEGER REFERENCES specialties(id) ON DELETE SET NULL,
+  event VARCHAR(30) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_institutions_type_city ON institutions(type, city);
+CREATE INDEX IF NOT EXISTS idx_specialties_education_level ON specialties(education_level);
+CREATE INDEX IF NOT EXISTS idx_programs_institution_id ON programs(institution_id);
+CREATE INDEX IF NOT EXISTS idx_programs_specialty_id ON programs(specialty_id);
+CREATE INDEX IF NOT EXISTS idx_test_results_user_created ON test_results(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_recommendations_user_score ON recommendations(user_id, score DESC);
+CREATE INDEX IF NOT EXISTS idx_rec_events_user ON recommendation_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_rec_events_program ON recommendation_events(program_id);
+CREATE INDEX IF NOT EXISTS idx_rec_events_event ON recommendation_events(event);

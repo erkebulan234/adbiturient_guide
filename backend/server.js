@@ -4,6 +4,8 @@ const dotenv = require('dotenv');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
+dotenv.config();
+
 const errorHandler = require('./src/middleware/errorHandler');
 const authRoutes = require('./src/routes/authRoutes');
 const profileRoutes = require('./src/routes/profileRoutes');
@@ -13,10 +15,6 @@ const programsRoutes = require('./src/routes/programsRoutes');
 const testRoutes = require('./src/routes/testRoutes');
 const recommendationsRoutes = require('./src/routes/recommendationsRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
-const eventsRoutes = require('./src/routes/eventsRoutes');
-
-
-dotenv.config();
 
 const app = express();
 
@@ -26,7 +24,7 @@ app.use(express.json());
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 минут
-  max: 10, // максимум 10 запросов
+  max: 10,
   message: { message: 'Слишком много попыток. Попробуйте через 15 минут.' },
   standardHeaders: true,
   legacyHeaders: false
@@ -45,7 +43,7 @@ app.use('/api/programs', programsRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
 app.use('/admin', adminRoutes);
-app.use('/api/events', eventsRoutes);
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;

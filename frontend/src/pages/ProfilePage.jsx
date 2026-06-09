@@ -7,17 +7,16 @@ import { useToast } from '../context/ToastContext';
 import Button from '../components/Button';
 import Input, { Select, Textarea } from '../components/Input';
 
+// Новые поля добавлены в список для расчёта completion
 const PROFILE_FIELDS = ['city', 'interests', 'subjects', 'skills', 'careerGoals'];
 
+// ─── Мелкие компоненты ────────────────────────────────────────
 
 function OnboardingBanner({ onDismiss }) {
   return (
     <section className="panel" style={{
       background: 'linear-gradient(135deg, #2f5f4f 0%, #1a3d30 100%)',
-      color: '#fff',
-      padding: '28px 32px',
-      marginBottom: 24,
-      position: 'relative'
+      color: '#fff', padding: '28px 32px', marginBottom: 24, position: 'relative'
     }}>
       <p className="kicker" style={{ color: 'rgba(255,255,255,0.7)' }}>Добро пожаловать</p>
       <h2 style={{ color: '#fff', marginBottom: 8 }}>Три шага до персонального подбора</h2>
@@ -25,32 +24,20 @@ function OnboardingBanner({ onDismiss }) {
         Заполните анкету, пройдите тест и получите список подходящих программ
         с объяснением почему они вам подходят.
       </p>
-
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.12)', padding: '8px 14px', borderRadius: 999 }}>
-          <span style={{ fontWeight: 800 }}>1</span>
-          <span style={{ fontSize: 14 }}>Заполните анкету ниже</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.12)', padding: '8px 14px', borderRadius: 999 }}>
-          <span style={{ fontWeight: 800 }}>2</span>
-          <span style={{ fontSize: 14 }}>Пройдите тест</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.12)', padding: '8px 14px', borderRadius: 999 }}>
-          <span style={{ fontWeight: 800 }}>3</span>
-          <span style={{ fontSize: 14 }}>Получите рекомендации</span>
-        </div>
+        {['Заполните анкету ниже', 'Пройдите тест', 'Получите рекомендации'].map((text, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8,
+            background: 'rgba(255,255,255,0.12)', padding: '8px 14px', borderRadius: 999 }}>
+            <span style={{ fontWeight: 800 }}>{i + 1}</span>
+            <span style={{ fontSize: 14 }}>{text}</span>
+          </div>
+        ))}
       </div>
-
-      <button
-        onClick={onDismiss}
-        style={{
-          position: 'absolute', top: 16, right: 16,
-          background: 'rgba(255,255,255,0.15)',
-          border: 'none', borderRadius: 999,
-          color: '#fff', cursor: 'pointer',
-          padding: '6px 12px', fontSize: 13, fontWeight: 700
-        }}
-      >
+      <button onClick={onDismiss} style={{
+        position: 'absolute', top: 16, right: 16,
+        background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 999,
+        color: '#fff', cursor: 'pointer', padding: '6px 12px', fontSize: 13, fontWeight: 700
+      }}>
         Понятно ×
       </button>
     </section>
@@ -93,34 +80,75 @@ function NextStep({ number, title, description, complete, to, action }) {
   );
 }
 
+// Подсказка-тег под полем dislike — показывает что уже добавлено
+function TagList({ values, onRemove }) {
+  if (values.length === 0) return null;
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+      {values.map((tag, i) => (
+        <span key={i} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          background: '#fee2e2', color: '#b91c1c',
+          borderRadius: 999, padding: '3px 10px', fontSize: 13, fontWeight: 600
+        }}>
+          {tag}
+          <button
+            type="button"
+            onClick={() => onRemove(i)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer',
+              color: '#b91c1c', padding: 0, fontSize: 14, lineHeight: 1 }}
+            aria-label={`Удалить ${tag}`}
+          >×</button>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ─── Утилиты ──────────────────────────────────────────────────
+
 function splitText(value) {
   return value.split(',').map(item => item.trim()).filter(Boolean);
 }
+
+// ─── Основной компонент ───────────────────────────────────────
 
 export default function ProfilePage() {
   const { showToast } = useToast();
 
   const [form, setForm] = useState({
-    educationLevel: 'grade_9',
-    city: '',
-    interests: '',
-    subjects: '',
-    skills: '',
-    careerGoals: ''
+    educationLevel:   'grade_9',
+    city:             '',
+    interests:        '',
+    subjects:         '',
+    skills:           '',
+    careerGoals:      '',
+    // Новые поля
+    entScore:         '',
+    dislikeSubjects:  '',
+    dislikeFields:    '',
   });
-  const [testResults, setTestResults] = useState([]);
-  const [recommendations, setRecommendations] = useState([]);
-  const [isSaving, setIsSaving] = useState(false);
 
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    return localStorage.getItem('onboarding_dismissed') !== 'true';
-  });
+  // Временные строки для ввода тегов нежелательного
+  const [dislikeSubjectsInput, setDislikeSubjectsInput] = useState('');
+  const [dislikeFieldsInput,   setDislikeFieldsInput]   = useState('');
+
+  // Распарсенные массивы нежелательного (для TagList)
+  const dislikeSubjectsArr = useMemo(() => splitText(form.dislikeSubjects), [form.dislikeSubjects]);
+  const dislikeFieldsArr   = useMemo(() => splitText(form.dislikeFields),   [form.dislikeFields]);
+
+  const [testResults,      setTestResults]      = useState([]);
+  const [recommendations,  setRecommendations]  = useState([]);
+  const [isSaving,         setIsSaving]         = useState(false);
+
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => localStorage.getItem('onboarding_dismissed') !== 'true'
+  );
 
   function dismissOnboarding() {
     localStorage.setItem('onboarding_dismissed', 'true');
     setShowOnboarding(false);
   }
-
 
   useEffect(() => {
     loadProfile();
@@ -132,12 +160,15 @@ export default function ProfilePage() {
       const data = await getProfile();
       if (data) {
         setForm({
-          educationLevel: data.education_level || 'grade_9',
-          city: data.city || '',
-          interests: (data.interests || []).join(', '),
-          subjects: (data.subjects || []).join(', '),
-          skills: (data.skills || []).join(', '),
-          careerGoals: data.career_goals || ''
+          educationLevel:  data.education_level  || 'grade_9',
+          city:            data.city             || '',
+          interests:       (data.interests       || []).join(', '),
+          subjects:        (data.subjects        || []).join(', '),
+          skills:          (data.skills          || []).join(', '),
+          careerGoals:     data.career_goals     || '',
+          entScore:        data.ent_score != null ? String(data.ent_score) : '',
+          dislikeSubjects: (data.dislike_subjects || []).join(', '),
+          dislikeFields:   (data.dislike_fields   || []).join(', '),
         });
       }
     } catch (err) {
@@ -147,10 +178,7 @@ export default function ProfilePage() {
 
   async function loadProgress() {
     try {
-      const [tests, recs] = await Promise.all([
-        getTestResults(),
-        getRecommendations()
-      ]);
+      const [tests, recs] = await Promise.all([getTestResults(), getRecommendations()]);
       setTestResults(Array.isArray(tests) ? tests : []);
       setRecommendations(Array.isArray(recs) ? recs : []);
     } catch (err) {
@@ -163,27 +191,58 @@ export default function ProfilePage() {
     setForm(prev => ({ ...prev, [name]: value }));
   }
 
+  // Добавить тег — читаем значение прямо из event.target, не из замыкания
+  function addDislikeTag(field, inputValue, setInputValue, e) {
+    if (e.key !== 'Enter' && e.key !== ',') return;
+    e.preventDefault();
+    const tag = inputValue.trim().replace(/,$/, '');
+    if (!tag) return;
+    setForm(prev => {
+      const current = splitText(prev[field]);
+      if (current.includes(tag)) return prev;
+      return { ...prev, [field]: [...current, tag].join(', ') };
+    });
+    setInputValue('');
+  }
+
+  // Удалить тег по индексу
+  function removeDislikeTag(field, index) {
+    setForm(prev => {
+      const arr = splitText(prev[field]);
+      arr.splice(index, 1);
+      return { ...prev, [field]: arr.join(', ') };
+    });
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
+
+    // Валидация балла ЕНТ
+    const entScore = form.entScore === '' ? null : Number(form.entScore);
+    if (entScore !== null && (isNaN(entScore) || entScore < 0 || entScore > 140)) {
+      showToast({ tone: 'danger', title: 'Ошибка', description: 'Балл ЕНТ: число от 0 до 140' });
+      return;
+    }
+
     setIsSaving(true);
     try {
       await saveProfile({
-        educationLevel: form.educationLevel,
-        city: form.city,
-        interests: splitText(form.interests),
-        subjects: splitText(form.subjects),
-        skills: splitText(form.skills),
-        careerGoals: form.careerGoals
+        educationLevel:  form.educationLevel,
+        city:            form.city,
+        interests:       splitText(form.interests),
+        subjects:        splitText(form.subjects),
+        skills:          splitText(form.skills),
+        careerGoals:     form.careerGoals,
+        // Новые поля
+        entScore,
+        dislikeSubjects: splitText(form.dislikeSubjects),
+        dislikeFields:   splitText(form.dislikeFields),
       });
-      showToast({
-        title: 'Анкета сохранена',
-        description: 'Теперь рекомендации будут точнее.'
-      });
+      showToast({ title: 'Анкета сохранена', description: 'Теперь рекомендации будут точнее.' });
       await loadProgress();
     } catch (err) {
       showToast({
-        tone: 'danger',
-        title: 'Ошибка',
+        tone: 'danger', title: 'Ошибка',
         description: err.response?.data?.message || 'Не удалось сохранить анкету'
       });
     } finally {
@@ -196,8 +255,8 @@ export default function ProfilePage() {
     return Math.round((filled / PROFILE_FIELDS.length) * 100);
   }, [form]);
 
-  const hasProfile = completion >= 60;
-  const hasTest = testResults.length > 0;
+  const hasProfile        = completion >= 60;
+  const hasTest           = testResults.length > 0;
   const hasRecommendations = recommendations.length > 0;
 
   return (
@@ -205,6 +264,7 @@ export default function ProfilePage() {
       {showOnboarding && !hasProfile && !hasTest && (
         <OnboardingBanner onDismiss={dismissOnboarding} />
       )}
+
       <section className="intro-section">
         <div>
           <p className="kicker">Поступление без лишнего шума</p>
@@ -214,7 +274,6 @@ export default function ProfilePage() {
             с реальными колледжами и университетами Казахстана.
           </p>
         </div>
-
         <div className="profile-summary">
           <div className="summary-header">
             <span>Готовность профиля</span>
@@ -226,39 +285,27 @@ export default function ProfilePage() {
       </section>
 
       <section className="overview-grid">
-        <OverviewStat label="Анкета"  value={`${completion}%`}        note="заполнено"      />
-        <OverviewStat label="Тест"    value={hasTest ? 'Пройден' : '–'} note={`${testResults.length} результатов`} />
-        <OverviewStat label="Подбор"  value={recommendations.length}   note="рекомендаций"  />
+        <OverviewStat label="Анкета" value={`${completion}%`}           note="заполнено" />
+        <OverviewStat label="Тест"   value={hasTest ? 'Пройден' : '–'}  note={`${testResults.length} результатов`} />
+        <OverviewStat label="Подбор" value={recommendations.length}     note="рекомендаций" />
       </section>
 
       <section className="workspace-grid">
         <aside className="panel">
           <p className="kicker">Следующие шаги</p>
           <div className="steps-list">
-            <NextStep
-              number="1"
-              title="Анкета"
+            <NextStep number="1" title="Анкета"
               description={hasProfile ? 'Базовый профиль уже собран.' : 'Добавьте город, интересы, предметы и цель.'}
-              complete={hasProfile}
-              to="/profile"
-              action={hasProfile ? 'Уточнить данные' : 'Заполнить анкету'}
-            />
-            <NextStep
-              number="2"
-              title="Профориентация"
+              complete={hasProfile} to="/profile"
+              action={hasProfile ? 'Уточнить данные' : 'Заполнить анкету'} />
+            <NextStep number="2" title="Профориентация"
               description={hasTest ? 'Результаты теста уже учитываются.' : 'Тест помогает понять подходящие типы задач.'}
-              complete={hasTest}
-              to="/test"
-              action={hasTest ? 'Пройти заново' : 'Начать тест'}
-            />
-            <NextStep
-              number="3"
-              title="Рекомендации"
+              complete={hasTest} to="/test"
+              action={hasTest ? 'Пройти заново' : 'Начать тест'} />
+            <NextStep number="3" title="Рекомендации"
               description={hasRecommendations ? 'Подбор программ уже готов.' : 'Сформируйте список после анкеты и теста.'}
-              complete={hasRecommendations}
-              to="/results"
-              action="Открыть подбор"
-            />
+              complete={hasRecommendations} to="/results"
+              action="Открыть подбор" />
           </div>
         </aside>
 
@@ -267,68 +314,103 @@ export default function ProfilePage() {
             <div>
               <p className="kicker">Профиль</p>
               <h2>Анкета абитуриента</h2>
-              <p>
-                Заполните только то, что действительно помогает системе понять
-                ваш образовательный контекст.
-              </p>
+              <p>Заполните только то, что действительно помогает системе понять ваш образовательный контекст.</p>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="form-grid" noValidate>
-            <Select
-              label="Куда поступаете?"
-              name="educationLevel"
-              value={form.educationLevel}
-              onChange={handleChange}
-            >
+
+            {/* ── Базовые поля ── */}
+            <Select label="Куда поступаете?" name="educationLevel"
+              value={form.educationLevel} onChange={handleChange}>
               <option value="grade_9">После 9 класса — колледж</option>
               <option value="grade_11">После 11 класса — университет</option>
             </Select>
 
+            <Input label="Город" name="city" value={form.city}
+              onChange={handleChange} placeholder="Например: Алматы" />
+
+            <Input label="Интересы" name="interests" value={form.interests}
+              onChange={handleChange} placeholder="IT, медицина, дизайн"
+              hint="Перечислите через запятую" />
+
+            <Input label="Любимые предметы" name="subjects" value={form.subjects}
+              onChange={handleChange} placeholder="математика, биология, информатика"
+              hint="Перечислите через запятую" />
+
+            <Input label="Навыки" name="skills" value={form.skills}
+              onChange={handleChange} placeholder="анализ, коммуникация, логика"
+              hint="Перечислите через запятую" />
+
+            <Textarea label="Карьерная цель" name="careerGoals" value={form.careerGoals}
+              onChange={handleChange} rows={4} className="wide"
+              placeholder="Например: хочу стать разработчиком образовательных сервисов" />
+
+            {/* ── Разделитель ── */}
+            <div className="wide" style={{
+              borderTop: '1px solid #e5e7eb', margin: '8px 0',
+              paddingTop: 20
+            }}>
+              <p className="kicker" style={{ marginBottom: 4 }}>Точная настройка</p>
+              <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 0 }}>
+                Эти поля помогают исключить неподходящие варианты и учесть балл ЕНТ.
+              </p>
+            </div>
+
+            {/* ── Балл ЕНТ ── */}
             <Input
-              label="Город"
-              name="city"
-              value={form.city}
+              label="Балл ЕНТ"
+              name="entScore"
+              type="number"
+              value={form.entScore}
               onChange={handleChange}
-              placeholder="Например: Алматы"
+              placeholder="Например: 95"
+              hint="От 0 до 140. Программы с порогом выше вашего балла получат штраф."
+              min={0}
+              max={140}
             />
 
-            <Input
-              label="Интересы"
-              name="interests"
-              value={form.interests}
-              onChange={handleChange}
-              placeholder="IT, медицина, дизайн"
-              hint="Перечислите через запятую"
-            />
+            {/* ── Нежелательные предметы ── */}
+            <div className="wide">
+              <label style={{ fontWeight: 600, fontSize: 14, display: 'block', marginBottom: 6 }}>
+                Не нравятся предметы
+              </label>
+              <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+                Специальности, требующие этих предметов, получат штраф. Введите и нажмите Enter.
+              </p>
+              <TagList
+                values={dislikeSubjectsArr}
+                onRemove={(i) => removeDislikeTag('dislikeSubjects', i)}
+              />
+              <input
+                className="input"
+                value={dislikeSubjectsInput}
+                onChange={e => setDislikeSubjectsInput(e.target.value)}
+                onKeyDown={e => addDislikeTag('dislikeSubjects', dislikeSubjectsInput, setDislikeSubjectsInput, e)}
+                placeholder="химия, история… Enter чтобы добавить"
+              />
+            </div>
 
-            <Input
-              label="Любимые предметы"
-              name="subjects"
-              value={form.subjects}
-              onChange={handleChange}
-              placeholder="математика, биология, информатика"
-              hint="Перечислите через запятую"
-            />
-
-            <Input
-              label="Навыки"
-              name="skills"
-              value={form.skills}
-              onChange={handleChange}
-              placeholder="анализ, коммуникация, логика"
-              hint="Перечислите через запятую"
-            />
-
-            <Textarea
-              label="Карьерная цель"
-              name="careerGoals"
-              value={form.careerGoals}
-              onChange={handleChange}
-              rows={4}
-              placeholder="Например: хочу стать разработчиком образовательных сервисов"
-              className="wide"
-            />
+            {/* ── Нежелательные сферы ── */}
+            <div className="wide">
+              <label style={{ fontWeight: 600, fontSize: 14, display: 'block', marginBottom: 6 }}>
+                Не хочу в сферу
+              </label>
+              <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+                Специальности из этих сфер получат штраф. Введите и нажмите Enter.
+              </p>
+              <TagList
+                values={dislikeFieldsArr}
+                onRemove={(i) => removeDislikeTag('dislikeFields', i)}
+              />
+              <input
+                className="input"
+                value={dislikeFieldsInput}
+                onChange={e => setDislikeFieldsInput(e.target.value)}
+                onKeyDown={e => addDislikeTag('dislikeFields', dislikeFieldsInput, setDislikeFieldsInput, e)}
+                placeholder="медицина, право… Enter чтобы добавить"
+              />
+            </div>
 
             <div className="form-actions wide">
               <Button type="submit" isLoading={isSaving} size="lg">
