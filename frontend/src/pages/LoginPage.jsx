@@ -5,17 +5,18 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext';
 import Button from '../components/Button';
 import Input from '../components/Input';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 import logoMark from '../assets/navigator-logo-mark.png';
 
 export default function LoginPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { setUser } = useAuth();
-  const { showToast } = useToast();
+  const navigate   = useNavigate();
+  const location   = useLocation();
+  const { setUser }    = useAuth();
+  const { showToast }  = useToast();
   const redirectTo = location.state?.from || '/profile';
 
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [errors, setErrors] = useState({});
+  const [form,      setForm]      = useState({ email: '', password: '' });
+  const [errors,    setErrors]    = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
   function handleChange(event) {
@@ -26,7 +27,7 @@ export default function LoginPage() {
 
   function validate() {
     const next = {};
-    if (!form.email) next.email = 'Введите email';
+    if (!form.email)    next.email    = 'Введите email';
     if (!form.password) next.password = 'Введите пароль';
     return next;
   }
@@ -35,16 +36,14 @@ export default function LoginPage() {
     event.preventDefault();
     const next = validate();
     if (Object.keys(next).length) { setErrors(next); return; }
-
     setIsLoading(true);
     try {
       const data = await login(form.email, form.password);
-      localStorage.setItem('token', data.token);
-      setUser(data.user);
+      setUser(data.user, data.token);
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      const message = err.response?.data?.message || 'Не удалось войти';
-      showToast({ tone: 'danger', title: 'Ошибка входа', description: message });
+      showToast({ tone: 'danger', title: 'Ошибка входа',
+        description: err.response?.data?.message || 'Не удалось войти' });
     } finally {
       setIsLoading(false);
     }
@@ -52,8 +51,10 @@ export default function LoginPage() {
 
   return (
     <main className="auth-page">
+
+      {/* ── Левая колонка — копи ── */}
       <section className="auth-copy">
-        <Link to="/" className="brand">
+        <Link to="/" className="brand" aria-label="Навигатор абитуриента">
           <span className="brand-mark has-logo" aria-hidden="true">
             <img className="brand-logo" src={logoMark} alt="" />
           </span>
@@ -67,46 +68,78 @@ export default function LoginPage() {
           <p className="kicker">Возвращайтесь к подбору</p>
           <h1>Продолжите путь к подходящей программе</h1>
           <p className="lead">
-            Войдите, чтобы открыть анкету, результаты теста и персональные рекомендации.
+            Войдите, чтобы открыть анкету, результаты теста
+            и персональные рекомендации.
           </p>
+        </div>
+
+        {/* Фичи снизу */}
+        <div style={{ display: 'grid', gap: 10 }}>
+          {[
+            ['🎯', 'Персональный подбор', 'на основе интересов и балла ЕНТ'],
+            ['📋', 'Сравнение программ',  'колледжи и университеты Казахстана'],
+            ['✅', 'Объяснимые рекомендации', 'понятная логика каждого варианта'],
+          ].map(([icon, title, sub]) => (
+            <div key={title} style={{
+              display: 'flex', gap: 12, alignItems: 'flex-start',
+              padding: '12px 14px', borderRadius: 14,
+              border: '1px solid var(--line)', background: 'rgba(255,255,255,0.5)'
+            }}>
+              <span style={{ fontSize: 18, lineHeight: 1.4 }}>{icon}</span>
+              <div>
+                <strong style={{ display: 'block', fontSize: 14, marginBottom: 2 }}>{title}</strong>
+                <span style={{ color: 'var(--muted)', fontSize: 13 }}>{sub}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
-      <section className="auth-card panel">
-        <h2>Вход</h2>
-        <p>Используйте email и пароль, указанные при регистрации.</p>
+      {/* ── Правая колонка — форма ── */}
+      <section style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 'clamp(32px, 6vw, 72px)',
+      }}>
+        <div className="auth-card panel" style={{ width: '100%', maxWidth: 420 }}>
+          <h2 style={{ marginBottom: 6 }}>Вход</h2>
+          <p style={{ marginBottom: 0 }}>
+            Используйте email и пароль, указанные при регистрации.
+          </p>
 
-        <form onSubmit={handleSubmit} className="stack-form" noValidate>
-          <Input
-            label="Email"
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            error={errors.email}
-            autoComplete="email"
-            autoFocus
-          />
+          <form onSubmit={handleSubmit} className="stack-form" noValidate>
+            <Input
+              label="Email"
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange}
+              error={errors.email}
+              autoComplete="email"
+              autoFocus
+            />
+            <Input
+              label="Пароль"
+              name="password"
+              type="password"
+              value={form.password}
+              onChange={handleChange}
+              error={errors.password}
+              autoComplete="current-password"
+            />
+            <Button type="submit" isLoading={isLoading} size="lg">
+              Войти
+            </Button>
+            <div style={{ margin: '16px 0', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+              или
+            </div>
+            <GoogleAuthButton redirectTo={redirectTo} />
+          </form>
 
-          <Input
-            label="Пароль"
-            name="password"
-            type="password"
-            value={form.password}
-            onChange={handleChange}
-            error={errors.password}
-            autoComplete="current-password"
-          />
-
-          <Button type="submit" isLoading={isLoading} size="lg">
-            Войти
-          </Button>
-        </form>
-
-        <p className="auth-switch">
-          Нет аккаунта?{' '}
-          <Link className="text-link" to="/register">Зарегистрироваться</Link>
-        </p>
+          <p className="auth-switch">
+            Нет аккаунта?{' '}
+            <Link className="text-link" to="/register">Зарегистрироваться</Link>
+          </p>
+        </div>
       </section>
     </main>
   );

@@ -1,18 +1,22 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useTheme } from '../hooks/useTheme.js';
 import logoMark from '../assets/navigator-logo-mark.png';
 
 const navItems = [
-  { to: '/profile', label: 'Обзор' },
-  { to: '/test', label: 'Тест' },
-  { to: '/results', label: 'Рекомендации' },
-  { to: '/institutions', label: 'Каталог' }
+  { to: '/profile',      label: 'Обзор' },
+  { to: '/test',         label: 'Тест' },
+  { to: '/results',      label: 'Рекомендации' },
+  { to: '/institutions', label: 'Каталог' },
+  { to: '/favorites',    label: 'Избранное' },
+  { to: '/compare',      label: 'Сравнение' },
 ];
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { theme, toggle } = useTheme();
 
   function handleLogout() {
     logout();
@@ -41,7 +45,6 @@ export default function Navbar() {
             {item.label}
           </NavLink>
         ))}
-
         {user?.role === 'admin' && (
           <NavLink
             to="/admin"
@@ -52,9 +55,20 @@ export default function Navbar() {
         )}
       </nav>
 
-      <button className="quiet-button" type="button" onClick={handleLogout}>
-        Выйти
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+        <button
+          onClick={toggle}
+          className="quiet-button"
+          type="button"
+          title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+          style={{ fontSize: 16 }}
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
+        <button className="quiet-button" type="button" onClick={handleLogout}>
+          Выйти
+        </button>
+      </div>
     </header>
   );
 }

@@ -1,37 +1,47 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000'
+  baseURL: 'http://localhost:5000',
+  withCredentials: true  // отправляет httpOnly cookie с каждым запросом
 });
 
+// Храним токен в памяти (не в localStorage)
+let accessToken = null;
+
+export function setAccessToken(token) {
+  accessToken = token;
+}
+
+export function getAccessToken() {
+  return accessToken;
+}
+
+// Подставляем access token в каждый запрос
 api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`;
   }
   return config;
 });
 
+// Если получили 401 — пробуем обновить токен и повторить запрос
 api.interceptors.response.use(
   response => response,
-  error => {
-    if (!error.response) {
-      // Сервер недоступен
-      console.error('Сервер недоступен');
-      return Promise.reject(error);
-    }
+  async error => {
+    const original = error.config;
 
-    if (error.response.status === 401) {
-      // Токен истёк или невалидный
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-      return Promise.reject(error);
-    }
+    if (error.response?.status === 401 && !original._retry) {
+      original._retry = true;
 
-    if (error.response.status === 403) {
-      window.location.href = '/profile';
-      return Promise.reject(error);
+      try {
+        const res = await api.post('/auth/refresh');
+        accessToken = res.data.token;
+        original.headers.Authorization = `Bearer ${accessToken}`;
+        return api(original);
+      } catch {
+        accessToken = null;
+        window.location.href = '/login';
+      }
     }
 
     return Promise.reject(error);

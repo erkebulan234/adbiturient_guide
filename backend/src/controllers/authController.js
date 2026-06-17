@@ -1,136 +1,109 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const pool = require('../config/db');
+const authService = require('../services/authService');
 
-function createToken(user) {
-  return jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      role: user.role
-    },
-    process.env.JWT_SECRET,
-    {
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d'
-    }
-  );
+function setRefreshCookie(res, token) {
+  res.cookie('refreshToken', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  });
 }
 
-function isValidEmail(email) {
-  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-async function register(req, res) {
+async function register(req, res, next) {
   try {
     const { name, email, password } = req.body;
+    const result = await authService.register({ name, email, password });
 
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email и пароль обязательны' });
-    }
-
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ message: 'Некорректный формат email' });
-    }
-
-    if (typeof password !== 'string' || password.length < 6) {
-      return res.status(400).json({ message: 'Пароль должен быть не менее 6 символов' });
-    }
-
-    if (password.length > 72) {
-      return res.status(400).json({ message: 'Пароль слишком длинный' });
-    }
-
-    if (name && typeof name !== 'string') {
-      return res.status(400).json({ message: 'Некорректное имя' });
-    }
-
-    const existingUser = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
-      [email.toLowerCase().trim()]
-    );
-
-    if (existingUser.rows.length > 0) {
-      return res.status(400).json({ message: 'Пользователь уже существует' });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 12);
-
-    const result = await pool.query(
-      `
-      INSERT INTO users (name, email, password_hash)
-      VALUES ($1, $2, $3)
-      RETURNING id, name, email, role
-      `,
-      [
-        name ? name.trim().slice(0, 120) : null,
-        email.toLowerCase().trim(),
-        passwordHash
-      ]
-    );
-
-    const user = result.rows[0];
-    const token = createToken(user);
+    setRefreshCookie(res, result.refreshToken);
 
     res.status(201).json({
       message: 'Регистрация успешна',
-      token,
-      user
+      token: result.token,
+      user: result.user
     });
   } catch (error) {
-    res.status(500).json({ message: 'Ошибка регистрации', error: error.message });
+    next(error);
   }
 }
 
-async function login(req, res) {
+async function login(req, res, next) {
   try {
     const { email, password } = req.body;
+    const result = await authService.login({ email, password });
 
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email и пароль обязательны' });
-    }
-
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ message: 'Некорректный формат email' });
-    }
-
-    if (typeof password !== 'string') {
-      return res.status(400).json({ message: 'Некорректный пароль' });
-    }
-
-    const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
-      [email.toLowerCase().trim()]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({ message: 'Неверный email или пароль' });
-    }
-
-    const user = result.rows[0];
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Неверный email или пароль' });
-    }
-
-    const token = createToken(user);
+    setRefreshCookie(res, result.refreshToken);
 
     res.json({
       message: 'Вход выполнен',
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
+      token: result.token,
+      user: result.user
     });
   } catch (error) {
-    res.status(500).json({ message: 'Ошибка входа', error: error.message });
+    next(error);
   }
 }
 
-module.exports = {
-  register,
-  login
-};
+async function refresh(req, res, next) {
+  try {
+    const oldToken = req.cookies?.refreshToken;
+    const result = await authService.refresh(oldToken);
+
+    // Ротация: выдаём новый refresh token в куки
+    setRefreshCookie(res, result.refreshToken);
+
+    res.json({
+      token: result.token,
+      user: result.user
+    });
+  } catch (error) {
+    res.clearCookie('refreshToken');
+    next(error);
+  }
+}
+
+async function logout(req, res, next) {
+  try {
+    const token = req.cookies?.refreshToken;
+    await authService.logout(token);
+    res.clearCookie('refreshToken');
+    res.json({ message: 'Выход выполнен' });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Выход со всех устройств — требует authMiddleware (req.user)
+async function logoutAll(req, res, next) {
+  try {
+    await authService.logoutAll(req.user.id);
+    res.clearCookie('refreshToken');
+    res.json({ message: 'Выход выполнен со всех устройств' });
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+async function googleLogin(req, res, next) {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ message: 'idToken обязателен' });
+    }
+
+    const result = await authService.loginWithGoogle(idToken);
+
+    setRefreshCookie(res, result.refreshToken);
+
+    res.json({
+      message: 'Вход через Google выполнен',
+      token: result.token,
+      user: result.user
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { register, login, refresh, logout, logoutAll, googleLogin };

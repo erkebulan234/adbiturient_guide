@@ -4,6 +4,7 @@ import { register } from '../api/auth.api';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext';
 import Button from '../components/Button';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 import Input from '../components/Input';
 import logoMark from '../assets/navigator-logo-mark.png';
 
@@ -39,8 +40,7 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       const data = await register(form.name, form.email, form.password);
-      localStorage.setItem('token', data.token);
-      setUser(data.user);
+      setUser(data.user, data.token);
       showToast({ tone: 'success', title: 'Добро пожаловать!', description: 'Аккаунт создан. Заполните анкету.' });
       navigate('/profile');
     } catch (err) {
@@ -116,6 +116,11 @@ export default function RegisterPage() {
           <Button type="submit" isLoading={isLoading} size="lg">
             Создать аккаунт
           </Button>
+          
+          <div style={{ margin: '16px 0', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+            или
+          </div>
+          <GoogleAuthButton redirectTo="/profile" />
         </form>
 
         <p className="auth-switch">

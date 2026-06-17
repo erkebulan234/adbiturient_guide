@@ -1,16 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getProfile, saveProfile } from '../api/profile.api';
-import { getTestResults } from '../api/test.api';
-import { getRecommendations } from '../api/recommendations.api';
+import { useProfile, useSaveProfile, useTestResults, useRecommendations } from '../hooks/useApi';
 import { useToast } from '../context/ToastContext';
 import Button from '../components/Button';
 import Input, { Select, Textarea } from '../components/Input';
 
-// Новые поля добавлены в список для расчёта completion
 const PROFILE_FIELDS = ['city', 'interests', 'subjects', 'skills', 'careerGoals'];
-
-// ─── Мелкие компоненты ────────────────────────────────────────
 
 function OnboardingBanner({ onDismiss }) {
   return (
@@ -80,7 +75,6 @@ function NextStep({ number, title, description, complete, to, action }) {
   );
 }
 
-// Подсказка-тег под полем dislike — показывает что уже добавлено
 function TagList({ values, onRemove }) {
   if (values.length === 0) return null;
   return (
@@ -105,85 +99,61 @@ function TagList({ values, onRemove }) {
   );
 }
 
-// ─── Утилиты ──────────────────────────────────────────────────
-
 function splitText(value) {
   return value.split(',').map(item => item.trim()).filter(Boolean);
 }
 
-// ─── Основной компонент ───────────────────────────────────────
-
 export default function ProfilePage() {
   const { showToast } = useToast();
 
+  // ── React Query ──
+  const { data: profileData } = useProfile();
+  const saveProfileMutation   = useSaveProfile();
+  const { data: testResults = [] }     = useTestResults();
+  const { data: recommendations = [] } = useRecommendations();
+
   const [form, setForm] = useState({
-    educationLevel:   'grade_9',
-    city:             '',
-    interests:        '',
-    subjects:         '',
-    skills:           '',
-    careerGoals:      '',
-    // Новые поля
-    entScore:         '',
-    dislikeSubjects:  '',
-    dislikeFields:    '',
+    educationLevel:  'grade_9',
+    city:            '',
+    interests:       '',
+    subjects:        '',
+    skills:          '',
+    careerGoals:     '',
+    entScore:        '',
+    dislikeSubjects: '',
+    dislikeFields:   '',
   });
 
-  // Временные строки для ввода тегов нежелательного
   const [dislikeSubjectsInput, setDislikeSubjectsInput] = useState('');
   const [dislikeFieldsInput,   setDislikeFieldsInput]   = useState('');
 
-  // Распарсенные массивы нежелательного (для TagList)
   const dislikeSubjectsArr = useMemo(() => splitText(form.dislikeSubjects), [form.dislikeSubjects]);
   const dislikeFieldsArr   = useMemo(() => splitText(form.dislikeFields),   [form.dislikeFields]);
-
-  const [testResults,      setTestResults]      = useState([]);
-  const [recommendations,  setRecommendations]  = useState([]);
-  const [isSaving,         setIsSaving]         = useState(false);
 
   const [showOnboarding, setShowOnboarding] = useState(
     () => localStorage.getItem('onboarding_dismissed') !== 'true'
   );
 
+  // Заполнить форму когда данные профиля загрузились
+  useEffect(() => {
+    if (profileData) {
+      setForm({
+        educationLevel:  profileData.education_level  || 'grade_9',
+        city:            profileData.city             || '',
+        interests:       (profileData.interests       || []).join(', '),
+        subjects:        (profileData.subjects        || []).join(', '),
+        skills:          (profileData.skills          || []).join(', '),
+        careerGoals:     profileData.career_goals     || '',
+        entScore:        profileData.ent_score != null ? String(profileData.ent_score) : '',
+        dislikeSubjects: (profileData.dislike_subjects || []).join(', '),
+        dislikeFields:   (profileData.dislike_fields   || []).join(', '),
+      });
+    }
+  }, [profileData]);
+
   function dismissOnboarding() {
     localStorage.setItem('onboarding_dismissed', 'true');
     setShowOnboarding(false);
-  }
-
-  useEffect(() => {
-    loadProfile();
-    loadProgress();
-  }, []);
-
-  async function loadProfile() {
-    try {
-      const data = await getProfile();
-      if (data) {
-        setForm({
-          educationLevel:  data.education_level  || 'grade_9',
-          city:            data.city             || '',
-          interests:       (data.interests       || []).join(', '),
-          subjects:        (data.subjects        || []).join(', '),
-          skills:          (data.skills          || []).join(', '),
-          careerGoals:     data.career_goals     || '',
-          entScore:        data.ent_score != null ? String(data.ent_score) : '',
-          dislikeSubjects: (data.dislike_subjects || []).join(', '),
-          dislikeFields:   (data.dislike_fields   || []).join(', '),
-        });
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  async function loadProgress() {
-    try {
-      const [tests, recs] = await Promise.all([getTestResults(), getRecommendations()]);
-      setTestResults(Array.isArray(tests) ? tests : []);
-      setRecommendations(Array.isArray(recs) ? recs : []);
-    } catch (err) {
-      console.error(err);
-    }
   }
 
   function handleChange(event) {
@@ -191,7 +161,6 @@ export default function ProfilePage() {
     setForm(prev => ({ ...prev, [name]: value }));
   }
 
-  // Добавить тег — читаем значение прямо из event.target, не из замыкания
   function addDislikeTag(field, inputValue, setInputValue, e) {
     if (e.key !== 'Enter' && e.key !== ',') return;
     e.preventDefault();
@@ -205,7 +174,6 @@ export default function ProfilePage() {
     setInputValue('');
   }
 
-  // Удалить тег по индексу
   function removeDislikeTag(field, index) {
     setForm(prev => {
       const arr = splitText(prev[field]);
@@ -217,37 +185,29 @@ export default function ProfilePage() {
   async function handleSubmit(event) {
     event.preventDefault();
 
-    // Валидация балла ЕНТ
     const entScore = form.entScore === '' ? null : Number(form.entScore);
     if (entScore !== null && (isNaN(entScore) || entScore < 0 || entScore > 140)) {
       showToast({ tone: 'danger', title: 'Ошибка', description: 'Балл ЕНТ: число от 0 до 140' });
       return;
     }
 
-    setIsSaving(true);
-    try {
-      await saveProfile({
-        educationLevel:  form.educationLevel,
-        city:            form.city,
-        interests:       splitText(form.interests),
-        subjects:        splitText(form.subjects),
-        skills:          splitText(form.skills),
-        careerGoals:     form.careerGoals,
-        // Новые поля
-        entScore,
-        dislikeSubjects: splitText(form.dislikeSubjects),
-        dislikeFields:   splitText(form.dislikeFields),
-      });
-      showToast({ title: 'Анкета сохранена', description: 'Теперь рекомендации будут точнее.' });
-      await loadProgress();
-    } catch (err) {
-      showToast({
+    saveProfileMutation.mutate({
+      educationLevel:  form.educationLevel,
+      city:            form.city,
+      interests:       splitText(form.interests),
+      subjects:        splitText(form.subjects),
+      skills:          splitText(form.skills),
+      careerGoals:     form.careerGoals,
+      entScore,
+      dislikeSubjects: splitText(form.dislikeSubjects),
+      dislikeFields:   splitText(form.dislikeFields),
+    }, {
+      onSuccess: () => showToast({ title: 'Анкета сохранена', description: 'Теперь рекомендации будут точнее.' }),
+      onError: (err) => showToast({
         tone: 'danger', title: 'Ошибка',
         description: err.response?.data?.message || 'Не удалось сохранить анкету'
-      });
-    } finally {
-      setIsSaving(false);
-    }
+      })
+    });
   }
 
   const completion = useMemo(() => {
@@ -255,9 +215,10 @@ export default function ProfilePage() {
     return Math.round((filled / PROFILE_FIELDS.length) * 100);
   }, [form]);
 
-  const hasProfile        = completion >= 60;
-  const hasTest           = testResults.length > 0;
+  const hasProfile         = completion >= 60;
+  const hasTest            = testResults.length > 0;
   const hasRecommendations = recommendations.length > 0;
+  const isSaving           = saveProfileMutation.isPending;
 
   return (
     <main className="page">
@@ -285,9 +246,9 @@ export default function ProfilePage() {
       </section>
 
       <section className="overview-grid">
-        <OverviewStat label="Анкета" value={`${completion}%`}           note="заполнено" />
-        <OverviewStat label="Тест"   value={hasTest ? 'Пройден' : '–'}  note={`${testResults.length} результатов`} />
-        <OverviewStat label="Подбор" value={recommendations.length}     note="рекомендаций" />
+        <OverviewStat label="Анкета" value={`${completion}%`}          note="заполнено" />
+        <OverviewStat label="Тест"   value={hasTest ? 'Пройден' : '–'} note={`${testResults.length} результатов`} />
+        <OverviewStat label="Подбор" value={recommendations.length}    note="рекомендаций" />
       </section>
 
       <section className="workspace-grid">
@@ -319,8 +280,6 @@ export default function ProfilePage() {
           </div>
 
           <form onSubmit={handleSubmit} className="form-grid" noValidate>
-
-            {/* ── Базовые поля ── */}
             <Select label="Куда поступаете?" name="educationLevel"
               value={form.educationLevel} onChange={handleChange}>
               <option value="grade_9">После 9 класса — колледж</option>
@@ -346,31 +305,21 @@ export default function ProfilePage() {
               onChange={handleChange} rows={4} className="wide"
               placeholder="Например: хочу стать разработчиком образовательных сервисов" />
 
-            {/* ── Разделитель ── */}
-            <div className="wide" style={{
-              borderTop: '1px solid #e5e7eb', margin: '8px 0',
-              paddingTop: 20
-            }}>
+            <div className="wide" style={{ borderTop: '1px solid #e5e7eb', margin: '8px 0', paddingTop: 20 }}>
               <p className="kicker" style={{ marginBottom: 4 }}>Точная настройка</p>
               <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 0 }}>
                 Эти поля помогают исключить неподходящие варианты и учесть балл ЕНТ.
               </p>
             </div>
 
-            {/* ── Балл ЕНТ ── */}
             <Input
-              label="Балл ЕНТ"
-              name="entScore"
-              type="number"
-              value={form.entScore}
-              onChange={handleChange}
+              label="Балл ЕНТ" name="entScore" type="number"
+              value={form.entScore} onChange={handleChange}
               placeholder="Например: 95"
               hint="От 0 до 140. Программы с порогом выше вашего балла получат штраф."
-              min={0}
-              max={140}
+              min={0} max={140}
             />
 
-            {/* ── Нежелательные предметы ── */}
             <div className="wide">
               <label style={{ fontWeight: 600, fontSize: 14, display: 'block', marginBottom: 6 }}>
                 Не нравятся предметы
@@ -378,10 +327,7 @@ export default function ProfilePage() {
               <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
                 Специальности, требующие этих предметов, получат штраф. Введите и нажмите Enter.
               </p>
-              <TagList
-                values={dislikeSubjectsArr}
-                onRemove={(i) => removeDislikeTag('dislikeSubjects', i)}
-              />
+              <TagList values={dislikeSubjectsArr} onRemove={(i) => removeDislikeTag('dislikeSubjects', i)} />
               <input
                 className="input"
                 value={dislikeSubjectsInput}
@@ -391,7 +337,6 @@ export default function ProfilePage() {
               />
             </div>
 
-            {/* ── Нежелательные сферы ── */}
             <div className="wide">
               <label style={{ fontWeight: 600, fontSize: 14, display: 'block', marginBottom: 6 }}>
                 Не хочу в сферу
@@ -399,10 +344,7 @@ export default function ProfilePage() {
               <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
                 Специальности из этих сфер получат штраф. Введите и нажмите Enter.
               </p>
-              <TagList
-                values={dislikeFieldsArr}
-                onRemove={(i) => removeDislikeTag('dislikeFields', i)}
-              />
+              <TagList values={dislikeFieldsArr} onRemove={(i) => removeDislikeTag('dislikeFields', i)} />
               <input
                 className="input"
                 value={dislikeFieldsInput}

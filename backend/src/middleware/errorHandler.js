@@ -1,9 +1,17 @@
-function errorHandler(err, req, res, next) {
-  console.error(err.stack);
+const logger = require('../utils/logger');
 
-  res.status(err.status || 500).json({
-    message: err.message || 'Внутренняя ошибка сервера'
+function errorHandler(err, req, res, next) {
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || 'Внутренняя ошибка сервера';
+
+  logger.error(message, {
+    status,
+    method: req.method,
+    url: req.originalUrl,
+    stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined
   });
+
+  res.status(status).json({ message });
 }
 
 module.exports = errorHandler;
