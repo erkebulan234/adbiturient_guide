@@ -1,6 +1,6 @@
 const pool = require('../config/db');
 
-async function findAll({ educationLevel, institutionType, city, page = 1, limit = 12 } = {}) {
+async function findAll({ educationLevel, institutionType, city, search, page = 1, limit = 12 } = {}) {
   const conditions = [];
   const values = [];
 
@@ -16,7 +16,13 @@ async function findAll({ educationLevel, institutionType, city, page = 1, limit 
 
   if (city) {
     values.push(city);
-    conditions.push(`i.city = $${values.length}`);
+    conditions.push(`i.city ILIKE $${values.length}`);
+  }
+
+  if (search) {
+    values.push(`%${search}%`);
+    const idx = values.length;
+    conditions.push(`(s.title ILIKE $${idx} OR i.name ILIKE $${idx} OR s.profession ILIKE $${idx})`);
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';

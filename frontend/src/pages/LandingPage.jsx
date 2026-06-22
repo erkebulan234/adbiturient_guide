@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import logoMark from '../assets/navigator-logo-mark.png';
+import { useReveal } from '../hooks/useReveal';
 
 const stats = [
   { value: '94%', label: 'лучший match в демо-подборе' },
@@ -84,6 +85,7 @@ function OnboardingPreview() {
 }
 
 export default function LandingPage() {
+  useReveal();
   const [pointer, setPointer] = useState({ x: 0, y: 0 });
 
   function handlePointerMove(event) {

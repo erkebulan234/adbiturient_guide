@@ -1743,8 +1743,16 @@ label {
 }
 
 .reveal-up {
-  animation: revealUp 0.78s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: var(--delay, 0ms);
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.78s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.78s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--delay, 0ms);
+}
+
+.reveal-up.is-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .auth-page {
@@ -1752,10 +1760,22 @@ label {
   width: min(1120px, calc(100% - 36px));
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 430px;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 430px); /* ← было просто 430px */
   gap: clamp(32px, 8vw, 90px);
   align-items: center;
   padding: 34px 0;
+}
+
+/* добавь новый медиа-блок */
+@media (max-width: 860px) {
+  .auth-page {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+  }
+
+  .auth-copy {
+    display: none; /* скрываем копи на мобиле */
+  }
 }
 
 .auth-copy {
@@ -2117,11 +2137,6 @@ label {
   font-weight: 700;
 }
 
-.meta-row span {
-  padding: 5px 8px;
-  background: var(--paper-soft);
-  color: var(--muted);
-}
 
 .recommendation-title h2 {
   max-width: 780px;
@@ -2476,4 +2491,482 @@ label {
   .admin-form-layout {
     grid-template-columns: 1fr;
   }
+}
+
+/* ─── favorite-button ────────────────────────────────────── */
+.favorite-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--line-strong);
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+  padding: 6px 10px;
+  font-size: 18px;
+  line-height: 1;
+  transition: var(--ease-fast);
+}
+
+.favorite-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.favorite-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ─── compare-button ─────────────────────────────────────── */
+.compare-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--line-strong);
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  transition: var(--ease-fast);
+}
+
+.compare-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.compare-button.is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.compare-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  color: var(--muted-light);
+}
+
+/* ─── compare-bar (floating) ─────────────────────────────── */
+.compare-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  max-width: 90vw;
+  padding: 14px 20px;
+  border-radius: 16px;
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transform: translateX(-50%);
+}
+
+.compare-bar-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.compare-bar-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.compare-bar-chip {
+  max-width: 180px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compare-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.compare-bar-clear {
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--bg);
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 14px;
+  transition: var(--ease-fast);
+}
+
+.compare-bar-clear:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.compare-bar-cta {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  transition: var(--ease-fast);
+}
+
+.compare-bar-cta:hover {
+  background: var(--text);
+}
+
+@media (max-width: 680px) {
+  .compare-bar {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-width: none;
+    transform: none;
+  }
+
+  .compare-bar-actions {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+/* ─── delete-modal-icon ───────────────────────────────────── */
+.delete-modal-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background: #fff1ef;
+  color: var(--danger);
+}
+
+[data-theme="dark"] .delete-modal-icon {
+  background: rgba(224, 90, 78, 0.16);
+}
+/* ─── responsive fix: details-grid + recommendation-title ──── */
+/* Добавить внутрь существующего @media (max-width: 680px) блока
+   в global.css, либо как отдельный блок сразу после него.       */
+
+@media (max-width: 680px) {
+  .details-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .details-grid div {
+    min-height: auto;
+  }
+}
+
+/* ─── responsive fix: match-score блок в ResultsPage ────────── */
+/* У вас уже есть правило:
+     .form-grid, .recommendation-title { grid-template-columns: 1fr; }
+   внутри @media (max-width: 680px). Этот блок добавляет соседнее
+   правило в ту же медиа-границу — на схлопывании в 1 колонку блок
+   с FavoriteButton/CompareButton/процентом сейчас выравнивается
+   по правому краю на всю ширину (криво смотрится), это чинит. */
+
+@media (max-width: 680px) {
+  .recommendation-title > div:last-child {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  /* ProfilePage — intro section */
+  .intro-section {
+    grid-template-columns: 1fr;
+  }
+
+  /* ProfilePage — workspace grid */
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* ResultsPage — results header */
+  .results-header {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  /* Navbar — скрыть лишние пункты */
+  .nav {
+    gap: 0;
+    overflow-x: auto;
+    padding: 4px 6px;
+  }
+  .nav-item {
+    padding: 8px 10px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
+@media (max-width: 860px) {
+  /* Nav */
+  .landing-nav {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+  }
+  .landing-nav-links {
+    display: none;
+  }
+
+  /* Hero */
+  .cinematic-hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    padding: clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px);
+    gap: 40px;
+  }
+  .cinematic-hero h1 {
+    font-size: clamp(38px, 8vw, 58px);
+  }
+
+  /* Hero stage — карточки из absolute в нормальный поток */
+  .hero-stage {
+    position: relative;
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transform: none !important;
+    perspective: none;
+  }
+  .hero-product-card {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    transform: none !important;
+    animation: revealUp 0.6s ease both !important;
+    border-radius: 22px;
+  }
+  .floating-label,
+  .hero-orbit {
+    display: none;
+  }
+
+  /* Sections */
+  .story-section,
+  .immersive-preview {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .section-copy {
+    position: static;
+  }
+
+  /* Recommendation showcase */
+  .recommendation-showcase {
+    grid-template-columns: 1fr;
+  }
+  .showcase-card.main {
+    min-height: auto;
+  }
+
+  /* Stories */
+  .stories-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stats */
+  .cinematic-stats {
+    grid-template-columns: 1fr;
+    border-radius: 22px;
+  }
+
+  /* CTA buttons */
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  .premium-cta-button.large,
+  .premium-login-button.large {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Nav кнопки — горизонтально, компактнее */
+  .landing-auth-actions {
+    flex-direction: row;
+    gap: 8px;
+  }
+  .premium-login-button,
+  .premium-cta-button {
+    min-height: 38px;
+    padding: 8px 13px;
+    font-size: 13px;
+  }
+
+  /* Убираем пустое пространство между proof и карточками */
+  .hero-proof {
+    margin-bottom: 0;
+  }
+
+  .hero-stage {
+    margin-top: 0;
+  }
+
+  .cinematic-hero {
+    gap: 24px;
+  }
+
+  .landing-nav {
+    position: relative;
+    top: auto;
+    margin-top: 0;
+    border-radius: 16px;
+  }
+}
+
+@media (max-width: 680px) {
+  /* Topbar */
+  .topbar {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    padding: 10px 14px;
+    min-height: 60px;
+  }
+
+  /* Intro section и results-header — в одну колонку */
+  .intro-section,
+  .results-header {
+    grid-template-columns: 1fr;
+    padding: 24px 0 28px;
+  }
+
+  /* Workspace grid — в одну колонку */
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Test header */
+  .test-header {
+    grid-template-columns: 1fr;
+  }
+
+  /* Overview grid — 2 колонки вместо 3 */
+  .overview-grid,
+  .compact-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .topbar {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 4px 8px;
+    min-height: auto;
+    padding: 10px 14px;
+  }
+
+  .topbar > div:last-child {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .topbar .nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    overflow-x: auto;
+    scrollbar-width: none;
+    justify-content: flex-start;
+  }
+
+  .topbar .nav::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+[data-theme="dark"] .landing-nav {
+  background: rgba(26, 25, 23, 0.88);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .journey-card,
+[data-theme="dark"] .story-card,
+[data-theme="dark"] .showcase-card {
+  background: var(--paper);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .cinematic-stats div {
+  background: var(--paper-soft);
+}
+
+[data-theme="dark"] .showcase-card.main {
+  background: var(--paper);
+}
+
+[data-theme="dark"] .showcase-card.muted {
+  background: var(--paper-soft);
+}
+
+[data-theme="dark"] .feature-row {
+  background: var(--paper-soft);
+}
+
+[data-theme="dark"] .landing-stats div {
+  background: var(--paper-soft);
+}
+
+[data-theme="dark"] body:has(.cinematic-landing) {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(184, 149, 91, 0.08), transparent 30rem),
+    radial-gradient(circle at 82% 0%, rgba(47, 95, 79, 0.08), transparent 34rem),
+    var(--bg);
+}
+[data-theme="dark"] .input:focus,
+[data-theme="dark"] .select:focus,
+[data-theme="dark"] .textarea:focus {
+  background: var(--paper);
+}
+[data-theme="dark"] .landing-nav-links a {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .landing-nav-links a:hover {
+  background: var(--paper);
+  color: var(--text);
+}
+
+[data-theme="dark"] .landing-nav-links {
+  background: rgba(26, 25, 23, 0.72);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .premium-login-button {
+  border-color: var(--line-strong);
+  background: var(--paper-soft);
+  color: var(--text);
+}
+[data-theme="dark"] .auth-card .primary-button,
+[data-theme="dark"] .stack-form .primary-button {
+  background: #ffffff;
+  color: #0f0e0c;
 }

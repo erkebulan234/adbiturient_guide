@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import ProgressBar from '../components/ProgressBar';
 import { useProfile, useSaveProfile, useTestResults, useRecommendations } from '../hooks/useApi';
 import { useToast } from '../context/ToastContext';
 import Button from '../components/Button';
 import Input, { Select, Textarea } from '../components/Input';
+import { useReveal } from '../hooks/useReveal';
 
 const PROFILE_FIELDS = ['city', 'interests', 'subjects', 'skills', 'careerGoals'];
 
@@ -11,10 +13,10 @@ function OnboardingBanner({ onDismiss }) {
   return (
     <section className="panel" style={{
       background: 'linear-gradient(135deg, #2f5f4f 0%, #1a3d30 100%)',
-      color: '#fff', padding: '28px 32px', marginBottom: 24, position: 'relative'
+      color: 'var(--text)', padding: '28px 32px', marginBottom: 24, position: 'relative'
     }}>
       <p className="kicker" style={{ color: 'rgba(255,255,255,0.7)' }}>Добро пожаловать</p>
-      <h2 style={{ color: '#fff', marginBottom: 8 }}>Три шага до персонального подбора</h2>
+      <h2 style={{ color: 'var(--text)', marginBottom: 8 }}>Три шага до персонального подбора</h2>
       <p style={{ color: 'rgba(255,255,255,0.75)', maxWidth: 560, marginBottom: 20 }}>
         Заполните анкету, пройдите тест и получите список подходящих программ
         с объяснением почему они вам подходят.
@@ -39,13 +41,6 @@ function OnboardingBanner({ onDismiss }) {
   );
 }
 
-function ProgressLine({ value }) {
-  return (
-    <div className="progress-line" aria-label={`Заполнено ${value}%`}>
-      <span style={{ width: `${value}%` }} />
-    </div>
-  );
-}
 
 function OverviewStat({ label, value, note }) {
   return (
@@ -82,7 +77,7 @@ function TagList({ values, onRemove }) {
       {values.map((tag, i) => (
         <span key={i} style={{
           display: 'inline-flex', alignItems: 'center', gap: 4,
-          background: '#fee2e2', color: '#b91c1c',
+          background: 'var(--ui-badge-fanger, #fff1ef)', color: 'var(--danger)',
           borderRadius: 999, padding: '3px 10px', fontSize: 13, fontWeight: 600
         }}>
           {tag}
@@ -90,7 +85,7 @@ function TagList({ values, onRemove }) {
             type="button"
             onClick={() => onRemove(i)}
             style={{ background: 'none', border: 'none', cursor: 'pointer',
-              color: '#b91c1c', padding: 0, fontSize: 14, lineHeight: 1 }}
+              color: 'var(--danger)', padding: 0, fontSize: 14, lineHeight: 1 }}
             aria-label={`Удалить ${tag}`}
           >×</button>
         </span>
@@ -104,6 +99,7 @@ function splitText(value) {
 }
 
 export default function ProfilePage() {
+  useReveal();
   const { showToast } = useToast();
 
   // ── React Query ──
@@ -226,7 +222,7 @@ export default function ProfilePage() {
         <OnboardingBanner onDismiss={dismissOnboarding} />
       )}
 
-      <section className="intro-section">
+      <section className="intro-section reveal-up">
         <div>
           <p className="kicker">Поступление без лишнего шума</p>
           <h1>Соберите понятный профиль и получите осмысленный подбор программ</h1>
@@ -236,22 +232,18 @@ export default function ProfilePage() {
           </p>
         </div>
         <div className="profile-summary">
-          <div className="summary-header">
-            <span>Готовность профиля</span>
-            <strong>{completion}%</strong>
-          </div>
-          <ProgressLine value={completion} />
+          <ProgressBar value={completion} max={100} label="Готовность профиля" showValue />
           <p>Чем точнее анкета, тем меньше случайных вариантов в рекомендациях.</p>
         </div>
       </section>
 
-      <section className="overview-grid">
+      <section className="overview-grid reveal-up" style={{ '--delay': '90ms' }}>
         <OverviewStat label="Анкета" value={`${completion}%`}          note="заполнено" />
         <OverviewStat label="Тест"   value={hasTest ? 'Пройден' : '–'} note={`${testResults.length} результатов`} />
         <OverviewStat label="Подбор" value={recommendations.length}    note="рекомендаций" />
       </section>
 
-      <section className="workspace-grid">
+      <section className="workspace-grid reveal-up" style={{ '--delay': '180ms' }}>
         <aside className="panel">
           <p className="kicker">Следующие шаги</p>
           <div className="steps-list">
@@ -305,9 +297,9 @@ export default function ProfilePage() {
               onChange={handleChange} rows={4} className="wide"
               placeholder="Например: хочу стать разработчиком образовательных сервисов" />
 
-            <div className="wide" style={{ borderTop: '1px solid #e5e7eb', margin: '8px 0', paddingTop: 20 }}>
+            <div className="wide" style={{ borderTop: '1px solid var(--line)', margin: '8px 0', paddingTop: 20 }}>
               <p className="kicker" style={{ marginBottom: 4 }}>Точная настройка</p>
-              <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 0 }}>
+              <p style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 0 }}>
                 Эти поля помогают исключить неподходящие варианты и учесть балл ЕНТ.
               </p>
             </div>
@@ -324,7 +316,7 @@ export default function ProfilePage() {
               <label style={{ fontWeight: 600, fontSize: 14, display: 'block', marginBottom: 6 }}>
                 Не нравятся предметы
               </label>
-              <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+              <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 8 }}>
                 Специальности, требующие этих предметов, получат штраф. Введите и нажмите Enter.
               </p>
               <TagList values={dislikeSubjectsArr} onRemove={(i) => removeDislikeTag('dislikeSubjects', i)} />
@@ -341,7 +333,7 @@ export default function ProfilePage() {
               <label style={{ fontWeight: 600, fontSize: 14, display: 'block', marginBottom: 6 }}>
                 Не хочу в сферу
               </label>
-              <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+              <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 8 }}>
                 Специальности из этих сфер получат штраф. Введите и нажмите Enter.
               </p>
               <TagList values={dislikeFieldsArr} onRemove={(i) => removeDislikeTag('dislikeFields', i)} />

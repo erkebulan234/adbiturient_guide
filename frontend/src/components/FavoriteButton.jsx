@@ -1,5 +1,4 @@
 import React from 'react';
-import api from '../api/axios';
 import { useFavoriteIds, useToggleFavorite } from '../hooks/useApi';
 
 export default function FavoriteButton({ programId, style = {} }) {
@@ -13,25 +12,19 @@ export default function FavoriteButton({ programId, style = {} }) {
     toggle.mutate({ programId, isFavorite });
   }
 
-
   return (
     <button
       onClick={handleClick}
       disabled={toggle.isPending}
       title={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+      className="favorite-button"
       style={{
-        background: 'none',
-        border: `2px solid ${isFavorite ? '#f59e0b' : '#e5e7eb'}`,
-        borderRadius: 10,
-        cursor: 'pointer',
-        padding: '6px 10px',
-        fontSize: 18,
-        lineHeight: 1,
-        color: isFavorite ? '#f59e0b' : '#9ca3af',
-        transition: 'all 0.15s',
+        borderColor: isFavorite ? 'var(--accent)' : 'var(--line-strong)',
+        color: isFavorite ? 'var(--accent)' : 'var(--muted)',
         ...style
       }}
       aria-label={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+      aria-pressed={isFavorite}
     >
       {isFavorite ? '★' : '☆'}
     </button>

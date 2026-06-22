@@ -5,8 +5,9 @@ import { useToast } from '../context/ToastContext';
 import Button from '../components/Button';
 import { Select } from '../components/Input';
 import { Badge, EmptyState, SkeletonLoader, Tabs } from '../components/ui';
-import FavoriteButton from '../components/FavoriteButton';
-import CompareButton from '../components/CompareButton';
+import RecommendationCard from '../components/RecommendationCard';
+import { useReveal } from '../hooks/useReveal';
+
 
 const SORT_TABS = [
   { value: 'match',   label: 'По совпадению' },
@@ -14,85 +15,17 @@ const SORT_TABS = [
   { value: 'grant',   label: 'С грантом'     },
 ];
 
+function normalizeArray(value) {
+  return Array.isArray(value) ? value.filter(Boolean) : [];
+}
+
 function getPercent(item) {
   const v = item.match_percent ?? item.matchPercent ?? item.score ?? 0;
   return Math.max(0, Math.min(100, Number(v) || 0));
 }
 
-function formatMoney(value) {
-  if (!value) return null;
-  return `${Number(value).toLocaleString('ru-RU')} тг/год`;
-}
-
-function normalizeArray(value) {
-  return Array.isArray(value) ? value.filter(Boolean) : [];
-}
-
-function RecommendationCard({ item, index }) {
-  const percent  = getPercent(item);
-  const subjects = normalizeArray(item.required_subjects);
-  const skills   = normalizeArray(item.required_skills);
-  const tags     = [...subjects, ...skills].slice(0, 8);
-  const isCollege = item.institution_type === 'college';
-
-  return (
-    <article className="recommendation-row" style={{ '--delay': `${index * 55}ms` }}>
-      <div className="recommendation-title">
-        <div>
-          <div className="meta-row">
-            <Badge tone="neutral">{isCollege ? 'Колледж' : 'Университет'}</Badge>
-            {item.has_grant        && <Badge tone="success">Грант</Badge>}
-            {item.institution_city && <Badge tone="neutral">{item.institution_city}</Badge>}
-          </div>
-          <h2>{item.title || item.specialty_title || 'Образовательная программа'}</h2>
-          <p>{item.description || 'Программа соответствует вашему профилю и результатам теста.'}</p>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-          <FavoriteButton programId={item.program_id} />
-          <CompareButton program={{ ...item, id: item.program_id }} />
-          <div className="match-score">
-            <strong>{percent}%</strong>
-            <span>совпадение</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="match-bar">
-        <span style={{ width: `${percent}%` }} />
-      </div>
-
-      <div className="details-grid">
-        <div><span>Профессия</span><strong>{item.profession || '—'}</strong></div>
-        <div><span>Учебное заведение</span><strong>{item.institution_name || '—'}</strong></div>
-        <div><span>Стоимость</span><strong>{formatMoney(item.tuition_fee) || '—'}</strong></div>
-        <div><span>Срок обучения</span><strong>{item.duration_years ? `${item.duration_years} года` : '—'}</strong></div>
-        <div><span>Язык</span><strong>{item.study_language || '—'}</strong></div>
-        <div><span>Мин. балл ЕНТ</span><strong>{item.min_score || '—'}</strong></div>
-      </div>
-
-      {tags.length > 0 && (
-        <div className="tag-row">
-          {tags.map((tag, i) => <span className="tag" key={`${tag}-${i}`}>{tag}</span>)}
-        </div>
-      )}
-
-      <div className="reason-box">
-        <span>Логика рекомендации</span>
-        <p>{item.reason || 'Система нашла пересечение между вашими предметами, навыками, интересами и требованиями программы.'}</p>
-      </div>
-
-      {item.institution_website && (
-        <div className="actions" style={{ marginTop: 18 }}>
-          <a className="secondary-button" href={item.institution_website} target="_blank" rel="noreferrer">
-            Сайт заведения →
-          </a>
-        </div>
-      )}
-    </article>
-  );
-}
-
 export default function ResultsPage() {
+  useReveal();
   const { showToast } = useToast();
 
   const { data: recommendations = [], isLoading } = useRecommendations();
@@ -129,7 +62,7 @@ export default function ResultsPage() {
 
   return (
     <main className="page">
-      <section className="results-header">
+      <section className="results-header reveal-up">
         <div>
           <p className="kicker">Интеллектуальный подбор</p>
           <h1>Рекомендации, которые можно сравнивать спокойно</h1>
@@ -144,7 +77,7 @@ export default function ResultsPage() {
         </div>
       </section>
 
-      <section className="compact-stats">
+      <section className="compact-stats reveal-up" style={{ '--delay': '90ms' }}>
         <div><strong>{recommendations.length}</strong><span>программ найдено</span></div>
         <div><strong>{bestMatch}%</strong><span>лучшее совпадение</span></div>
         <div><strong>{grantCount}</strong><span>вариантов с грантом</span></div>

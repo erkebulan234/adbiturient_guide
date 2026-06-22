@@ -1,7 +1,11 @@
 import React, { useRef, useState } from 'react';
 import api from '../api/axios';
+import DeleteModal from '../components/DeleteModal';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../context/ToastContext';
+import InstitutionForm from '../components/InstitutionForm';
+import SpecialtyForm   from '../components/SpecialtyForm';
+import ProgramForm     from '../components/ProgramForm';
 
 const statLabels = {
   users: 'Пользователи', profiles: 'Анкеты', institutions: 'Заведения',
@@ -19,56 +23,7 @@ const TABS = [
 function splitText(v) { return v.split(',').map(s => s.trim()).filter(Boolean); }
 function normalize(v) { return String(v || '').trim().toLowerCase(); }
 
-// ── Модал подтверждения удаления ─────────────────────────────
-function DeleteModal({ item, onConfirm, onCancel }) {
-  if (!item) return null;
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(25,24,23,0.32)', backdropFilter: 'blur(8px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
-    }} onMouseDown={onCancel}>
-      <div style={{
-        width: 'min(440px, 100%)', padding: 28, borderRadius: 24,
-        background: 'var(--paper)', border: '1px solid var(--line)',
-        boxShadow: '0 24px 60px rgba(25,24,23,0.18)'
-      }} onMouseDown={e => e.stopPropagation()}>
-        <div style={{
-          width: 48, height: 48, borderRadius: '50%',
-          background: '#fff1ef', color: 'var(--danger)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16
-        }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-          </svg>
-        </div>
-        <h3 style={{ fontSize: 20, fontWeight: 730, letterSpacing: '-0.03em', marginBottom: 8 }}>
-          Удалить запись?
-        </h3>
-        <p style={{ color: 'var(--muted)', marginBottom: 24, fontSize: 15 }}>
-          <strong style={{ color: 'var(--text)' }}>{item.name || item.title}</strong> будет удалено безвозвратно.
-        </p>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={onCancel} style={{
-            flex: 1, padding: '11px 0', borderRadius: 999,
-            border: '1px solid var(--line)', background: 'var(--paper)',
-            cursor: 'pointer', fontWeight: 700, fontSize: 15
-          }}>
-            Отмена
-          </button>
-          <button onClick={onConfirm} style={{
-            flex: 1, padding: '11px 0', borderRadius: 999,
-            border: '1px solid #efc9c3', background: '#fff7f5',
-            color: 'var(--danger)', cursor: 'pointer', fontWeight: 700, fontSize: 15,
-            transition: '0.16s'
-          }}>
-            Удалить
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+
 
 // ── Стат-карточка ─────────────────────────────────────────────
 function AdminStat({ label, value }) {
@@ -80,126 +35,7 @@ function AdminStat({ label, value }) {
   );
 }
 
-// ── Форма заведения ───────────────────────────────────────────
-function InstitutionForm({ value, onChange, onSubmit, onCancel, isEditing, saving }) {
-  return (
-    <form onSubmit={onSubmit} className="stack-form">
-      <label>Название<input className="input" name="name" value={value.name} onChange={onChange} required /></label>
-      <label>Тип
-        <select className="select" name="type" value={value.type} onChange={onChange}>
-          <option value="college">Колледж</option>
-          <option value="university">Университет</option>
-        </select>
-      </label>
-      <label>Город<input className="input" name="city" value={value.city} onChange={onChange} required /></label>
-      <label>Адрес<input className="input" name="address" value={value.address} onChange={onChange} /></label>
-      <label>Сайт<input className="input" name="website" value={value.website} onChange={onChange} /></label>
-      <label>Описание<textarea className="textarea" name="description" value={value.description} onChange={onChange} rows="3" /></label>
-      <div style={{ display: 'flex', gap: 10 }}>
-        {isEditing && (
-          <button type="button" onClick={onCancel} style={{
-            flex: 1, padding: '11px 0', borderRadius: 999,
-            border: '1px solid var(--line)', background: 'var(--paper)',
-            cursor: 'pointer', fontWeight: 700
-          }}>Отмена</button>
-        )}
-        <button className="primary-button" type="submit" style={{ flex: 2 }} disabled={saving}>
-          {saving
-            ? <><span className="button-spinner" /> Сохраняем…</>
-            : isEditing ? 'Сохранить изменения' : 'Добавить'
-          }
-        </button>
-      </div>
-    </form>
-  );
-}
 
-// ── Форма специальности ───────────────────────────────────────
-function SpecialtyForm({ value, onChange, onSubmit, onCancel, isEditing, saving }) {
-  return (
-    <form onSubmit={onSubmit} className="stack-form">
-      <label>Название<input className="input" name="title" value={value.title} onChange={onChange} required /></label>
-      <label>Код<input className="input" name="code" value={value.code} onChange={onChange} /></label>
-      <label>Уровень
-        <select className="select" name="educationLevel" value={value.educationLevel} onChange={onChange}>
-          <option value="grade_9">После 9 класса</option>
-          <option value="grade_11">После 11 класса</option>
-        </select>
-      </label>
-      <label>Профессия<input className="input" name="profession" value={value.profession} onChange={onChange} /></label>
-      <label>Описание<textarea className="textarea" name="description" value={value.description} onChange={onChange} rows="3" /></label>
-      <label>Предметы через запятую<input className="input" name="requiredSubjects" value={value.requiredSubjects} onChange={onChange} /></label>
-      <label>Навыки через запятую<input className="input" name="requiredSkills" value={value.requiredSkills} onChange={onChange} /></label>
-      <label>Средняя зарплата<input className="input" name="averageSalary" value={value.averageSalary} onChange={onChange} /></label>
-      <label>Востребованность<input className="input" name="demandLevel" value={value.demandLevel} onChange={onChange} /></label>
-      <label>Теги через запятую<input className="input" name="tags" value={value.tags} onChange={onChange} /></label>
-      <div style={{ display: 'flex', gap: 10 }}>
-        {isEditing && (
-          <button type="button" onClick={onCancel} style={{
-            flex: 1, padding: '11px 0', borderRadius: 999,
-            border: '1px solid var(--line)', background: 'var(--paper)',
-            cursor: 'pointer', fontWeight: 700
-          }}>Отмена</button>
-        )}
-        <button className="primary-button" type="submit" style={{ flex: 2 }} disabled={saving}>
-          {saving
-            ? <><span className="button-spinner" /> Сохраняем…</>
-            : isEditing ? 'Сохранить изменения' : 'Добавить'
-          }
-        </button>
-      </div>
-    </form>
-  );
-}
-
-// ── Форма программы ───────────────────────────────────────────
-function ProgramForm({ value, onChange, onSubmit, onCancel, isEditing, institutions, specialties, saving }) {
-  return (
-    <form onSubmit={onSubmit} className="stack-form">
-      <label>Учебное заведение
-        <select className="select" name="institutionId" value={value.institutionId} onChange={onChange} required>
-          <option value="">Выберите заведение</option>
-          {institutions.map(i => (
-            <option key={i.id} value={i.id}>{i.name} — {i.type === 'college' ? 'колледж' : 'университет'} — {i.city}</option>
-          ))}
-        </select>
-      </label>
-      <label>Специальность
-        <select className="select" name="specialtyId" value={value.specialtyId} onChange={onChange} required>
-          <option value="">Выберите специальность</option>
-          {specialties.map(s => (
-            <option key={s.id} value={s.id}>{s.title} — {s.education_level === 'grade_9' ? 'после 9 класса' : 'после 11 класса'}</option>
-          ))}
-        </select>
-      </label>
-      <label>Стоимость<input className="input" name="tuitionFee" value={value.tuitionFee} onChange={onChange} /></label>
-      <label>Срок обучения<input className="input" name="durationYears" value={value.durationYears} onChange={onChange} /></label>
-      <label>Язык<input className="input" name="studyLanguage" value={value.studyLanguage} onChange={onChange} /></label>
-      <label>Форма<input className="input" name="studyForm" value={value.studyForm} onChange={onChange} /></label>
-      <label>Документы через запятую<input className="input" name="requiredDocuments" value={value.requiredDocuments} onChange={onChange} /></label>
-      <label>Минимальный балл<input className="input" name="minScore" value={value.minScore} onChange={onChange} /></label>
-      <label className="checkbox-field">
-        <input type="checkbox" name="hasGrant" checked={value.hasGrant} onChange={onChange} />
-        Есть грант
-      </label>
-      <div style={{ display: 'flex', gap: 10 }}>
-        {isEditing && (
-          <button type="button" onClick={onCancel} style={{
-            flex: 1, padding: '11px 0', borderRadius: 999,
-            border: '1px solid var(--line)', background: 'var(--paper)',
-            cursor: 'pointer', fontWeight: 700
-          }}>Отмена</button>
-        )}
-        <button className="primary-button" type="submit" style={{ flex: 2 }} disabled={saving}>
-          {saving
-            ? <><span className="button-spinner" /> Сохраняем…</>
-            : isEditing ? 'Сохранить изменения' : 'Добавить'
-          }
-        </button>
-      </div>
-    </form>
-  );
-}
 
 // ── Главный компонент ─────────────────────────────────────────
 export default function AdminPage() {
@@ -208,6 +44,7 @@ export default function AdminPage() {
 
   const [activeTab, setActiveTab] = useState('institutions');
   const [deleteTarget, setDeleteTarget] = useState(null); // { type, item }
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   const [editingInstitutionId, setEditingInstitutionId] = useState(null);
   const [editingSpecialtyId,   setEditingSpecialtyId]   = useState(null);
@@ -223,6 +60,10 @@ export default function AdminPage() {
   const [institution, setInstitution] = useState(EMPTY_INSTITUTION);
   const [specialty,   setSpecialty]   = useState(EMPTY_SPECIALTY);
   const [program,     setProgram]     = useState(EMPTY_PROGRAM);
+
+  const [institutionErrors, setInstitutionErrors] = useState({});
+  const [specialtyErrors,   setSpecialtyErrors]   = useState({});
+  const [programErrors,     setProgramErrors]     = useState({});
 
   const { data: stats }           = useQuery({ queryKey: ['admin', 'stats'],         queryFn: async () => (await api.get('/admin/stats')).data });
   const { data: institutions = [] } = useQuery({ queryKey: ['admin', 'institutions'], queryFn: async () => (await api.get('/api/institutions')).data });
@@ -263,12 +104,17 @@ export default function AdminPage() {
   // ── Институции ───────────────────────────────────────────────
   async function submitInstitution(e) {
     e.preventDefault();
+    setInstitutionErrors({});
     const exists = institutions.some(i =>
-      i.id !== editingInstitutionId &&
+      (editingInstitutionId === null || Number(i.id) !== Number(editingInstitutionId)) &&
       normalize(i.name) === normalize(institution.name) &&
       normalize(i.city) === normalize(institution.city)
     );
-    if (exists) { showToast({ tone: 'danger', title: 'Уже существует' }); return; }
+    if (exists) {
+      setInstitutionErrors({ name: 'Заведение с этим названием и городом уже есть' });
+      showToast({ tone: 'danger', title: 'Уже существует' });
+      return;
+    }
     setSaving(true);
     try {
       const res = editingInstitutionId
@@ -294,32 +140,40 @@ export default function AdminPage() {
   function cancelInstitution() {
     setEditingInstitutionId(null);
     setInstitution(EMPTY_INSTITUTION);
+    setInstitutionErrors({});
   }
 
   async function confirmDelete() {
     const { type, item } = deleteTarget;
+    setIsDeleting(true);
     try {
       if (type === 'institution') await api.delete(`/admin/institutions/${item.id}`);
       if (type === 'specialty')   await api.delete(`/admin/specialties/${item.id}`);
       if (type === 'program')     await api.delete(`/admin/programs/${item.id}`);
       showToast({ title: 'Удалено' });
       invalidateAll();
+      setDeleteTarget(null);
     } catch (err) {
       showToast({ tone: 'danger', title: 'Ошибка', description: err.response?.data?.message || 'Попробуйте ещё раз' });
     } finally {
-      setDeleteTarget(null); // ← было setSaving(false), должно быть это
+      setIsDeleting(false);
     }
   }
 
   // ── Специальности ────────────────────────────────────────────
   async function submitSpecialty(e) {
     e.preventDefault();
+    setSpecialtyErrors({});
     const exists = specialties.some(s =>
-      s.id !== editingSpecialtyId &&
+      (editingSpecialtyId === null || Number(s.id) !== Number(editingSpecialtyId)) &&
       normalize(s.title) === normalize(specialty.title) &&
       normalize(s.education_level) === normalize(specialty.educationLevel)
     );
-    if (exists) { showToast({ tone: 'danger', title: 'Уже существует' }); return; }
+    if (exists) {
+      setSpecialtyErrors({ title: 'Специальность с этим названием и уровнем уже есть' });
+      showToast({ tone: 'danger', title: 'Уже существует' });
+      return;
+    }
     setSaving(true);
     try {
       const payload = { ...specialty, requiredSubjects: splitText(specialty.requiredSubjects), requiredSkills: splitText(specialty.requiredSkills), tags: splitText(specialty.tags) };
@@ -331,8 +185,7 @@ export default function AdminPage() {
       invalidateAll();
     } catch (err) {
       showToast({ tone: 'danger', title: 'Ошибка', description: err.response?.data?.message });
-    }
-    finally {
+    } finally {
       setSaving(false);
     }
   }
@@ -347,17 +200,23 @@ export default function AdminPage() {
   function cancelSpecialty() {
     setEditingSpecialtyId(null);
     setSpecialty(EMPTY_SPECIALTY);
+    setSpecialtyErrors({});
   }
 
   // ── Программы ────────────────────────────────────────────────
   async function submitProgram(e) {
     e.preventDefault();
+    setProgramErrors({});
     const exists = programs.some(p =>
       p.id !== editingProgramId &&
       Number(p.institution_id) === Number(program.institutionId) &&
       Number(p.specialty_id)   === Number(program.specialtyId)
     );
-    if (exists) { showToast({ tone: 'danger', title: 'Уже существует' }); return; }
+    if (exists) {
+      setProgramErrors({ specialtyId: 'Такая программа для этого заведения уже существует' });
+      showToast({ tone: 'danger', title: 'Уже существует' });
+      return;
+    }
     setSaving(true);
     try {
       const payload = { ...program, institutionId: Number(program.institutionId), specialtyId: Number(program.specialtyId), tuitionFee: Number(program.tuitionFee), durationYears: Number(program.durationYears), minScore: Number(program.minScore), requiredDocuments: splitText(program.requiredDocuments) };
@@ -384,6 +243,7 @@ export default function AdminPage() {
   function cancelProgram() {
     setEditingProgramId(null);
     setProgram(EMPTY_PROGRAM);
+    setProgramErrors({});
   }
 
   const isEditing = {
@@ -396,6 +256,7 @@ export default function AdminPage() {
     <main className="page admin-page">
       <DeleteModal
         item={deleteTarget?.item}
+        isDeleting={isDeleting}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
       />
@@ -462,7 +323,11 @@ export default function AdminPage() {
               <InstitutionForm
                 saving={saving}
                 value={institution}
-                onChange={e => setInstitution({ ...institution, [e.target.name]: e.target.value })}
+                errors={institutionErrors}
+                onChange={e => {
+                  setInstitution({ ...institution, [e.target.name]: e.target.value });
+                  if (institutionErrors[e.target.name]) setInstitutionErrors({});
+                }}
                 onSubmit={submitInstitution}
                 onCancel={cancelInstitution}
                 isEditing={!!editingInstitutionId}
@@ -476,7 +341,11 @@ export default function AdminPage() {
               <SpecialtyForm
                 saving={saving}
                 value={specialty}
-                onChange={e => setSpecialty({ ...specialty, [e.target.name]: e.target.value })}
+                errors={specialtyErrors}
+                onChange={e => {
+                  setSpecialty({ ...specialty, [e.target.name]: e.target.value });
+                  if (specialtyErrors[e.target.name]) setSpecialtyErrors({});
+                }}
                 onSubmit={submitSpecialty}
                 onCancel={cancelSpecialty}
                 isEditing={!!editingSpecialtyId}
@@ -490,9 +359,11 @@ export default function AdminPage() {
               <ProgramForm
                 saving={saving}
                 value={program}
+                errors={programErrors}
                 onChange={e => {
                   const { name, value: v, type, checked } = e.target;
                   setProgram({ ...program, [name]: type === 'checkbox' ? checked : v });
+                  if (programErrors[name]) setProgramErrors({});
                 }}
                 onSubmit={submitProgram}
                 onCancel={cancelProgram}

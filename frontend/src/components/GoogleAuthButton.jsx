@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import api from '../api/axios';
-import { setAccessToken } from '../api/axios';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext';
 
@@ -38,13 +37,13 @@ export default function GoogleAuthButton({ redirectTo = '/profile' }) {
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-        <GoogleLogin
-          onSuccess={handleSuccess}
-          onError={handleError}
-          text="continue_with"
-          shape="rectangular"
-          width="320"
-        />
+      <GoogleLogin
+        onSuccess={handleSuccess}
+        onError={handleError}
+        text="continue_with"
+        shape="rectangular"
+        width="320"
+      />
     </div>
   );
 }

@@ -4,61 +4,11 @@ import Input, { Select } from '../components/Input';
 import { Badge, EmptyState, SkeletonLoader } from '../components/ui';
 import FavoriteButton from '../components/FavoriteButton';
 import CompareButton from '../components/CompareButton';
+import ProgramCard from '../components/ProgramCard';
 
 const PAGE_SIZE = 12;
 
-function formatMoney(value) {
-  if (!value) return null;
-  return `${Number(value).toLocaleString('ru-RU')} тг/год`;
-}
 
-function ProgramCard({ program }) {
-  const subjects  = Array.isArray(program.required_subjects) ? program.required_subjects : [];
-  const skills    = Array.isArray(program.required_skills)   ? program.required_skills   : [];
-  const tags      = [...subjects, ...skills].slice(0, 7);
-  const isCollege = program.institution_type === 'college';
-
-  return (
-    <article className="program-card">
-      <div className="program-card-header">
-        <div>
-          <div className="meta-row">
-            <Badge tone="neutral">{isCollege ? 'Колледж' : 'Университет'}</Badge>
-            {program.has_grant        && <Badge tone="success">Грант</Badge>}
-            {program.institution_city && <Badge tone="neutral">{program.institution_city}</Badge>}
-          </div>
-          <h2>{program.specialty_title}</h2>
-          <p>{program.profession || 'Профессия не указана'}</p>
-        </div>
-        <FavoriteButton programId={program.id} />
-        <CompareButton program={program} />
-      </div>
-
-      <div className="details-grid compact">
-        <div><span>Учебное заведение</span><strong>{program.institution_name || '—'}</strong></div>
-        <div><span>Стоимость</span><strong>{formatMoney(program.tuition_fee) || '—'}</strong></div>
-        <div><span>Срок</span><strong>{program.duration_years ? `${program.duration_years} года` : '—'}</strong></div>
-        <div><span>Язык</span><strong>{program.study_language || '—'}</strong></div>
-        <div><span>Форма</span><strong>{program.study_form || '—'}</strong></div>
-        <div><span>Мин. балл ЕНТ</span><strong>{program.min_score || '—'}</strong></div>
-      </div>
-
-      {tags.length > 0 && (
-        <div className="tag-row">
-          {tags.map((tag, index) => <span className="tag" key={`${tag}-${index}`}>{tag}</span>)}
-        </div>
-      )}
-
-      {program.institution_website && (
-        <div className="actions" style={{ marginTop: 16 }}>
-          <a className="secondary-button" href={program.institution_website} target="_blank" rel="noreferrer">
-            Сайт заведения →
-          </a>
-        </div>
-      )}
-    </article>
-  );
-}
 
 function Pagination({ page, totalPages, onChange }) {
   if (totalPages <= 1) return null;
@@ -151,16 +101,6 @@ export default function Institutions() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // Локальный поиск применяется только к текущей странице
-  const filtered = useMemo(() => {
-    if (!filters.search.trim()) return programs;
-    const q = filters.search.toLowerCase().trim();
-    return programs.filter(p =>
-      p.specialty_title?.toLowerCase().includes(q) ||
-      p.institution_name?.toLowerCase().includes(q) ||
-      p.profession?.toLowerCase().includes(q)
-    );
-  }, [programs, filters.search]);
 
   const summary = useMemo(() => {
     const cities = new Set(programs.map(p => p.institution_city).filter(Boolean));
@@ -188,7 +128,7 @@ export default function Institutions() {
 
       <section className="filters-strip" style={{ gridTemplateColumns: '1fr' }}>
         <Input
-          label="Поиск (по текущей странице)" name="search" value={filters.search} onChange={handleChange}
+          label="Поиск" name="search" value={filters.search} onChange={handleChange}
           placeholder="Название специальности или заведения"
         />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
@@ -208,25 +148,25 @@ export default function Institutions() {
 
       {isLoading && <SkeletonLoader rows={3} />}
 
-      {!isLoading && filtered.length === 0 && (
+      {!isLoading && programs.length === 0 && (
         <EmptyState
           title="Программы не найдены"
-          description="Попробуйте изменить город, уровень обучения или тип учебного заведения."
+          description="Попробуйте изменить город, поисковый запрос, уровень обучения или тип учебного заведения."
         />
       )}
-
-      {!isLoading && filtered.length > 0 && (
+      
+      {!isLoading && programs.length > 0 && (
         <>
           <section className="catalog-list" style={{ opacity: isFetching ? 0.6 : 1, transition: 'opacity 0.15s' }}>
-            {filtered.map(program => <ProgramCard program={program} key={program.id} />)}
+            {programs.map(program => <ProgramCard program={program} key={program.id} />)}
           </section>
-
+      
           <Pagination
             page={pagination.page}
             totalPages={pagination.totalPages}
             onChange={handlePageChange}
           />
-
+      
           <p style={{ textAlign: 'center', marginTop: 12, fontSize: 13, color: '#94a3b8' }}>
             Страница {pagination.page} из {pagination.totalPages} · {pagination.total} программ всего
           </p>

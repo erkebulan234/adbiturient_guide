@@ -12,73 +12,24 @@ export default function CompareBar() {
   if (location.pathname === '/compare') return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: 24,
-      left: '50%',
-      transform: 'translateX(-50%)',
-      background: '#1e293b',
-      color: '#fff',
-      borderRadius: 16,
-      padding: '14px 20px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 16,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-      zIndex: 100,
-      maxWidth: '90vw',
-      flexWrap: 'wrap'
-    }}>
-      <span style={{ fontSize: 14, fontWeight: 600 }}>
+    <div className="compare-bar">
+      <span className="compare-bar-label">
         Сравнение: {items.length} из 3
       </span>
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div className="compare-bar-chips">
         {items.map(item => (
-          <span key={item.id} style={{
-            background: 'rgba(255,255,255,0.15)',
-            borderRadius: 8,
-            padding: '4px 10px',
-            fontSize: 13,
-            maxWidth: 180,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
-          }}>
+          <span key={item.id} className="compare-bar-chip">
             {item.specialty_title || item.title || 'Программа'}
           </span>
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
-        <button
-          onClick={() => clear()}
-          style={{
-            background: 'rgba(255,255,255,0.1)',
-            border: 'none',
-            borderRadius: 10,
-            color: '#fff',
-            cursor: 'pointer',
-            padding: '8px 12px',
-            fontSize: 14
-          }}
-        >
+      <div className="compare-bar-actions">
+        <button onClick={() => clear()} className="compare-bar-clear" aria-label="Очистить сравнение">
           ✕
         </button>
-        <Link
-          to="/compare"
-          style={{
-            background: '#2563eb',
-            border: 'none',
-            borderRadius: 10,
-            color: '#fff',
-            cursor: 'pointer',
-            padding: '8px 16px',
-            fontWeight: 700,
-            fontSize: 14,
-            textDecoration: 'none'
-          }}
-        >
+        <Link to="/compare" className="compare-bar-cta">
           Сравнить →
         </Link>
       </div>

@@ -6,6 +6,7 @@ export async function getPrograms(filters = {}, signal = null) {
   if (filters.educationLevel)  params.educationLevel  = filters.educationLevel;
   if (filters.institutionType) params.institutionType = filters.institutionType;
   if (filters.city)            params.city            = filters.city;
+  if (filters.search)          params.search          = filters.search;
   if (filters.page)            params.page            = filters.page;
   if (filters.limit)           params.limit           = filters.limit;
 

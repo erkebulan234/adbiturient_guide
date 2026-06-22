@@ -13,6 +13,12 @@ const sizes = {
   lg: 'ui-button-lg'
 };
 
+const spinnerSizes = {
+  sm: 'ui-spinner-sm',
+  md: 'ui-spinner-sm',
+  lg: 'ui-spinner-md'
+};
+
 export default function Button({
   as: Component = 'button',
   variant = 'primary',
@@ -32,7 +38,9 @@ export default function Button({
 
   return (
     <Component className={classes} disabled={disabled || isLoading} {...props}>
-      {isLoading && <span className="button-spinner" aria-hidden="true" />}
+      {isLoading && (
+        <span className={`ui-spinner ${spinnerSizes[size] || spinnerSizes.md}`} aria-hidden="true" />
+      )}
       <span>{children}</span>
     </Component>
   );

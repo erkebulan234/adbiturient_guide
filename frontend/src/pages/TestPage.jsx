@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTests, useTestById, useSubmitTest, useTestResults } from '../hooks/useApi';
 import { useToast } from '../context/ToastContext';
@@ -185,6 +185,7 @@ export default function TestPage() {
   const [direction, setDirection] = useState('forward');
   const [animating, setAnimating] = useState(false);
   const [retaking, setRetaking] = useState(false);
+  const autoAdvanceRef = useRef(null);
 
   const { data: tests = [], isLoading: testsLoading } = useTests();
   const firstTestId = tests[0]?.id;
@@ -204,8 +205,13 @@ export default function TestPage() {
   const isFirst = currentIndex === 0;
   const currentAnswerId = current ? selectedAnswers[current.id] : null;
 
+  useEffect(() => {
+    return () => clearTimeout(autoAdvanceRef.current);
+  }, []);
+
   function goTo(index, dir) {
     if (animating) return;
+    clearTimeout(autoAdvanceRef.current);
     setAnimating(true);
     setDirection(dir);
     setTimeout(() => {
@@ -217,7 +223,10 @@ export default function TestPage() {
   function handleSelect(questionId, answerId) {
     setSelectedAnswers(prev => ({ ...prev, [questionId]: answerId }));
     if (!isLast) {
-      setTimeout(() => goTo(currentIndex + 1, 'forward'), 500);
+      clearTimeout(autoAdvanceRef.current);
+      autoAdvanceRef.current = setTimeout(() => {
+        goTo(currentIndex + 1, 'forward');
+      }, 500);
     }
   }
 

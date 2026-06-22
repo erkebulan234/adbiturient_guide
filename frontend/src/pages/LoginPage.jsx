@@ -83,7 +83,7 @@ export default function LoginPage() {
             <div key={title} style={{
               display: 'flex', gap: 12, alignItems: 'flex-start',
               padding: '12px 14px', borderRadius: 14,
-              border: '1px solid var(--line)', background: 'rgba(255,255,255,0.5)'
+              border: '1px solid var(--line)', background: 'var(--paper-soft)'
             }}>
               <span style={{ fontSize: 18, lineHeight: 1.4 }}>{icon}</span>
               <div>
@@ -98,7 +98,7 @@ export default function LoginPage() {
       {/* ── Правая колонка — форма ── */}
       <section style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 'clamp(32px, 6vw, 72px)',
+        padding: 'clamp(20px, 3vw, 48px) 0', minWidth: 0,
       }}>
         <div className="auth-card panel" style={{ width: '100%', maxWidth: 420 }}>
           <h2 style={{ marginBottom: 6 }}>Вход</h2>
