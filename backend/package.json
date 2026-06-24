@@ -1,12 +1,14 @@
 {
   "name": "edumatch-backend",
   "version": "1.0.0",
+  "type": "module",
   "description": "EduMatch Kazakhstan Backend API",
   "main": "server.js",
   "scripts": {
-    "test": "jest --testEnvironment node",
+    "test": "vitest",
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test:watch": "vitest --watch"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -25,8 +27,10 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.9",
     "jest": "^30.4.2",
     "nodemon": "^3.1.14",
-    "supertest": "^7.2.2"
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.9"
   }
 }

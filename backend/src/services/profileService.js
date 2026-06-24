@@ -1,4 +1,4 @@
-const profileRepository = require('../repositories/profileRepository');
+import * as profileRepository from '../repositories/profileRepository.js';
 
 function normalizeText(value, maxLength = 500) {
   if (value === null || value === undefined) return null;
@@ -63,4 +63,4 @@ async function saveProfile(userId, body) {
   return profileRepository.upsert(userId, normalized);
 }
 
-module.exports = { getProfile, saveProfile };
+export { getProfile, saveProfile };

@@ -1,4 +1,4 @@
-const specialtiesService = require('../services/specialtiesService');
+import * as specialtiesService from '../services/specialtiesService.js';
 
 async function getSpecialties(req, res, next) {
   try {
@@ -19,4 +19,4 @@ async function getSpecialtyById(req, res, next) {
   }
 }
 
-module.exports = { getSpecialties, getSpecialtyById };
+export { getSpecialties, getSpecialtyById };

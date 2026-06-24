@@ -1,7 +1,7 @@
-const institutionsRepository = require('../repositories/institutionsRepository');
+import * as institutionsRepository from '../repositories/institutionsRepository.js';
 
 async function getInstitutions(filters) {
   return institutionsRepository.findAll(filters);
 }
 
-module.exports = { getInstitutions };
+export { getInstitutions };

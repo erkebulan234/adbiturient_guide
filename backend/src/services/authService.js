@@ -1,8 +1,8 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const userRepository = require('../repositories/userRepository');
-const refreshTokenRepository = require('../repositories/refreshTokenRepository');
-const { OAuth2Client } = require('google-auth-library');
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import * as userRepository from '../repositories/userRepository.js';
+import * as refreshTokenRepository from '../repositories/refreshTokenRepository.js';
+import { OAuth2Client } from 'google-auth-library';
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -34,6 +34,7 @@ function formatUser(user) {
 }
 
 async function issueTokens(user) {
+  await refreshTokenRepository.deleteExpiredByUser(user.id);
   const accessToken  = createAccessToken(user);
   const refreshToken = createRefreshToken(user);
 
@@ -177,4 +178,4 @@ async function loginWithGoogle(idToken) {
   return issueTokens(user);
 }
 
-module.exports = { register, login, refresh, logout, logoutAll, loginWithGoogle };
+export { register, login, refresh, logout, logoutAll, loginWithGoogle };

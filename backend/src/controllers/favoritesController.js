@@ -1,4 +1,4 @@
-const favoritesRepository = require('../repositories/favoritesRepository');
+import * as favoritesRepository from '../repositories/favoritesRepository.js';
 
 async function getFavorites(req, res, next) {
   try {
@@ -38,4 +38,4 @@ async function removeFavorite(req, res, next) {
   }
 }
 
-module.exports = { getFavorites, getFavoriteIds, addFavorite, removeFavorite };
+export { getFavorites, getFavoriteIds, addFavorite, removeFavorite };

@@ -102,10 +102,11 @@ export default function Institutions() {
   }
 
 
-  const summary = useMemo(() => {
-    const cities = new Set(programs.map(p => p.institution_city).filter(Boolean));
-    return { total: pagination.total, cities: cities.size, grants: programs.filter(p => p.has_grant).length };
-  }, [programs, pagination.total]);
+  const summary = useMemo(() => ({
+    total: pagination.total,
+    cities: data?.stats?.cities ?? 0,
+    grants: data?.stats?.grants ?? 0
+  }), [data, pagination.total]);
 
   return (
     <main className="page">

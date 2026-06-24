@@ -1,4 +1,4 @@
-const pool = require('../config/db');
+import pool from '../config/db.js';
 
 // ── Stats ────────────────────────────────────────────────────────────────────
 
@@ -155,7 +155,7 @@ async function deleteProgram(id) {
   return result.rows[0] || null;
 }
 
-module.exports = {
+export {
   getStats,
   createInstitution, updateInstitution, deleteInstitution,
   createSpecialty,   updateSpecialty,   deleteSpecialty,

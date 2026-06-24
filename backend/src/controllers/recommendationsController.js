@@ -1,4 +1,4 @@
-const recommendationsService = require('../services/recommendationsService');
+import * as recommendationsService from '../services/recommendationsService.js';
 
 async function generateRecommendations(req, res, next) {
   try {
@@ -18,4 +18,4 @@ async function getRecommendations(req, res, next) {
   }
 }
 
-module.exports = { generateRecommendations, getRecommendations };
+export { generateRecommendations, getRecommendations };

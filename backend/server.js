@@ -1,26 +1,29 @@
-const express      = require('express');
-const cors         = require('cors');
-const dotenv       = require('dotenv');
-const helmet       = require('helmet');
-const rateLimit    = require('express-rate-limit');
-const cookieParser = require('cookie-parser');
-const logger       = require('./src/utils/logger');
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
+import logger from './src/utils/logger.js';
 
 dotenv.config();
 
-const authRoutes            = require('./src/routes/authRoutes');
-const profileRoutes         = require('./src/routes/profileRoutes');
-const institutionsRoutes    = require('./src/routes/institutionsRoutes');
-const specialtiesRoutes     = require('./src/routes/specialtiesRoutes');
-const programsRoutes        = require('./src/routes/programsRoutes');
-const testRoutes            = require('./src/routes/testRoutes');
-const recommendationsRoutes = require('./src/routes/recommendationsRoutes');
-const adminRoutes           = require('./src/routes/adminRoutes');
-const favoritesRoutes       = require('./src/routes/favoritesRoutes');
-const errorHandler          = require('./src/middleware/errorHandler');
-const swaggerUi             = require('swagger-ui-express');
-const swaggerSpec           = require('./src/config/swagger');
+import authRoutes from './src/routes/authRoutes.js';
+import profileRoutes from './src/routes/profileRoutes.js';
+import institutionsRoutes from './src/routes/institutionsRoutes.js';
+import specialtiesRoutes from './src/routes/specialtiesRoutes.js';
+import programsRoutes from './src/routes/programsRoutes.js';
+import testRoutes from './src/routes/testRoutes.js';
+import recommendationsRoutes from './src/routes/recommendationsRoutes.js';
+import adminRoutes from './src/routes/adminRoutes.js';
+import favoritesRoutes from './src/routes/favoritesRoutes.js';
 
+import errorHandler from './src/middleware/errorHandler.js';
+
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './src/config/swagger.js';
+
+import healthRoutes from './src/routes/healthRoutes.js';
 
 const app = express();
 
@@ -81,6 +84,8 @@ app.use('/api/recommendations', recommendationsRoutes);
 app.use('/api/favorites',       favoritesRoutes);
 app.use('/admin',               adminRoutes);
 app.use(errorHandler);
+
+app.use('/api/health', healthRoutes);
 
 const PORT = process.env.PORT || 5000;
 

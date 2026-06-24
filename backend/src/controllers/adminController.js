@@ -1,4 +1,4 @@
-const adminService = require('../services/adminService');
+import * as adminService from '../services/adminService.js';
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
@@ -97,7 +97,7 @@ async function deleteProgram(req, res, next) {
   }
 }
 
-module.exports = {
+export {
   getStats,
   createInstitution, updateInstitution, deleteInstitution,
   createSpecialty,   updateSpecialty,   deleteSpecialty,

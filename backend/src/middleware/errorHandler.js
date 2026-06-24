@@ -1,6 +1,6 @@
-const logger = require('../utils/logger');
+import logger from '../utils/logger.js';
 
-function errorHandler(err, req, res, next) {
+export default function errorHandler(err, req, res, next) {
   const status = err.status || err.statusCode || 500;
   const message = err.message || 'Внутренняя ошибка сервера';
 
@@ -8,10 +8,10 @@ function errorHandler(err, req, res, next) {
     status,
     method: req.method,
     url: req.originalUrl,
-    stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined
+    stack: process.env.NODE_ENV !== 'production'
+      ? err.stack
+      : undefined
   });
 
   res.status(status).json({ message });
 }
-
-module.exports = errorHandler;

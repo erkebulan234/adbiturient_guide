@@ -1,25 +1,17 @@
-const {
-  _saveRecommendations,
-  _deduplicatePrograms,
-  _pickTop
-} = require('../src/controllers/recommendationsController');
+import { describe, test, expect, vi } from 'vitest';
 
-describe('recommendationsController helpers', () => {
+const { _saveRecommendations, _deduplicatePrograms, _pickTop } = await import('../src/services/recommendationsService');
+
+describe('recommendationsService helpers', () => {
   test('_saveRecommendations deletes and batch inserts using transaction client', async () => {
-    const client = {
-      query: jest.fn().mockResolvedValue({ rows: [] })
-    };
+    const client = { query: vi.fn().mockResolvedValue({ rows: [] }) };
 
     await _saveRecommendations(client, 7, [
       { specialty_id: 1, program_id: 10, score: 91, reason: 'match 1' },
       { specialty_id: 2, program_id: 20, score: 84, reason: 'match 2' }
     ]);
 
-    expect(client.query).toHaveBeenNthCalledWith(
-      1,
-      'DELETE FROM recommendations WHERE user_id = $1',
-      [7]
-    );
+    expect(client.query).toHaveBeenNthCalledWith(1, 'DELETE FROM recommendations WHERE user_id = $1', [7]);
     expect(client.query).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining('INSERT INTO recommendations'),
@@ -28,17 +20,12 @@ describe('recommendationsController helpers', () => {
   });
 
   test('_saveRecommendations only deletes when list is empty', async () => {
-    const client = {
-      query: jest.fn().mockResolvedValue({ rows: [] })
-    };
+    const client = { query: vi.fn().mockResolvedValue({ rows: [] }) };
 
     await _saveRecommendations(client, 7, []);
 
     expect(client.query).toHaveBeenCalledTimes(1);
-    expect(client.query).toHaveBeenCalledWith(
-      'DELETE FROM recommendations WHERE user_id = $1',
-      [7]
-    );
+    expect(client.query).toHaveBeenCalledWith('DELETE FROM recommendations WHERE user_id = $1', [7]);
   });
 
   test('_deduplicatePrograms keeps grant option for same institution and specialty', () => {
@@ -52,12 +39,7 @@ describe('recommendationsController helpers', () => {
   });
 
   test('_pickTop prefers scored recommendations', () => {
-    const result = _pickTop([
-      { score: 90 },
-      { score: 0 },
-      { score: 80 }
-    ], 2);
-
+    const result = _pickTop([{ score: 90 }, { score: 0 }, { score: 80 }], 2);
     expect(result).toEqual([{ score: 90 }, { score: 80 }]);
   });
 });

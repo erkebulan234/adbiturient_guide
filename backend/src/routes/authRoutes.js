@@ -1,14 +1,16 @@
-const router = require('express').Router();
-const authController = require('../controllers/authController');
-const authMiddleware = require('../middleware/authMiddleware');
-const validateBody = require('../middleware/validateBody');
-const { registerSchema, loginSchema } = require('../validators/schemas');
+import { Router } from 'express';
+import * as authController from '../controllers/authController.js';
+import authMiddleware from '../middleware/authMiddleware.js';
+import validateBody from '../middleware/validateBody.js';
+import { registerSchema, loginSchema, googleLoginSchema } from '../validators/schemas.js';
+
+const router = Router();
 
 router.post('/register',   validateBody(registerSchema), authController.register);
 router.post('/login',      validateBody(loginSchema),    authController.login);
-router.post('/google',     authController.googleLogin);
+router.post('/google',     validateBody(googleLoginSchema), authController.googleLogin);
 router.post('/refresh',    authController.refresh);
 router.post('/logout',     authController.logout);
 router.post('/logout-all', authMiddleware, authController.logoutAll);
 
-module.exports = router;
+export default router;

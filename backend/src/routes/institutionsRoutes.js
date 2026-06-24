@@ -1,6 +1,8 @@
-const router = require('express').Router();
-const institutionsController = require('../controllers/institutionsController');
+import { Router } from 'express';
+import * as institutionsController from '../controllers/institutionsController.js';
+
+const router = Router();
 
 router.get('/', institutionsController.getInstitutions);
 
-module.exports = router;
+export default router;

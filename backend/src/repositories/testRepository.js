@@ -1,4 +1,4 @@
-const pool = require('../config/db');
+import pool from '../config/db.js';
 
 async function findAll() {
   const result = await pool.query('SELECT * FROM tests ORDER BY id');
@@ -71,12 +71,24 @@ async function findResultsByUserId(userId) {
   return result.rows;
 }
 
-module.exports = {
+async function getLastTestTags(userId) {
+  const result = await pool.query(
+    `SELECT result_tags FROM test_results
+     WHERE user_id = $1
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId]
+  );
+  return result.rows[0]?.result_tags || [];
+}
+
+export {
   findAll,
   findById,
   findQuestionsWithAnswers,
   findQuestionIdsByTestId,
   findAnswersByIdsAndTest,
   saveResult,
-  findResultsByUserId
+  findResultsByUserId,
+  getLastTestTags
 };

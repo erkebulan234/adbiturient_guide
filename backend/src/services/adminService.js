@@ -1,4 +1,4 @@
-const adminRepository = require('../repositories/adminRepository');
+import * as adminRepository from '../repositories/adminRepository.js';
 
 function notFound(message) {
   const error = new Error(message);
@@ -98,7 +98,7 @@ async function deleteProgram(id) {
   if (!deleted) throw notFound('Программа не найдена');
 }
 
-module.exports = {
+export {
   getStats,
   createInstitution, updateInstitution, deleteInstitution,
   createSpecialty,   updateSpecialty,   deleteSpecialty,

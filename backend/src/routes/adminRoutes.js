@@ -1,11 +1,16 @@
-const router = require('express').Router();
-const authMiddleware = require('../middleware/authMiddleware');
-const roleMiddleware = require('../middleware/roleMiddleware');
-const adminController = require('../controllers/adminController');
-const validateBody = require('../middleware/validateBody');
-const { institutionSchema, specialtySchema, programSchema } = require('../validators/schemas');
+import { Router } from 'express';
+import authMiddleware from '../middleware/authMiddleware.js';
+import roleMiddleware from '../middleware/roleMiddleware.js';
+import * as adminController from '../controllers/adminController.js';
+import validateBody from '../middleware/validateBody.js';
+import {
+  institutionSchema,
+  specialtySchema,
+  programSchema
+} from '../validators/schemas.js';
 
 const isAdmin = [authMiddleware, roleMiddleware('admin')];
+const router = Router();
 
 router.get('/stats', ...isAdmin, adminController.getStats);
 
@@ -21,4 +26,4 @@ router.post('/programs', ...isAdmin, validateBody(programSchema), adminControlle
 router.put('/programs/:id', ...isAdmin, validateBody(programSchema), adminController.updateProgram);
 router.delete('/programs/:id', ...isAdmin, adminController.deleteProgram);
 
-module.exports = router;
+export default router;

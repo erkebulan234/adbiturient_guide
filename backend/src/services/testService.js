@@ -1,4 +1,4 @@
-const testRepository = require('../repositories/testRepository');
+import * as testRepository from '../repositories/testRepository.js';
 
 function buildQuestionsMap(rows) {
   const map = new Map();
@@ -120,4 +120,4 @@ async function getMyResults(userId) {
   return testRepository.findResultsByUserId(userId);
 }
 
-module.exports = { getAllTests, getTestById, submitTest, getMyResults };
+export { getAllTests, getTestById, submitTest, getMyResults };

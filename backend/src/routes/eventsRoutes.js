@@ -2,11 +2,13 @@
 // POST /api/recommendations/:id/event
 // Фиксирует view / save / apply / dismiss для будущего CF
 
-const router  = require('express').Router();
-const pool    = require('../config/db');
-const authMiddleware = require('../middleware/authMiddleware');
+import { Router } from 'express';
+import pool from '../config/db.js';
+import authMiddleware from '../middleware/authMiddleware.js';
 
 const ALLOWED_EVENTS = ['view', 'save', 'apply', 'dismiss'];
+
+const router = Router();
 
 router.post('/:id/event', authMiddleware, async (req, res) => {
   try {
@@ -43,4 +45,4 @@ router.post('/:id/event', authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

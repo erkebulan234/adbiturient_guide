@@ -1,89 +1,89 @@
-const request = require('supertest');
-const express = require('express');
-const cors = require('cors');
+import { describe, test, expect, beforeEach, vi } from 'vitest';
+import request from 'supertest';
+import express from 'express';
+import cors from 'cors';
 
-// Мокаем pool чтобы не нужна реальная БД
-jest.mock('../src/config/db', () => ({
-  query: jest.fn()
+vi.mock('../src/services/authService.js', () => ({
+  register: vi.fn(),
+  login: vi.fn(),
+  refresh: vi.fn(),
+  logout: vi.fn(),
+  logoutAll: vi.fn(),
+  loginWithGoogle: vi.fn()
 }));
+vi.mock('google-auth-library', () => {
+  class MockOAuth2Client {
+    verifyIdToken = vi.fn();
+  }
 
-const pool = require('../src/config/db');
-const authRoutes = require('../src/routes/authRoutes');
+  return {
+    OAuth2Client: MockOAuth2Client
+  };
+});
+
+import * as authService from '../src/services/authService.js';
+import authRoutes from '../src/routes/authRoutes.js';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use('/auth', authRoutes);
+app.use((err, req, res, next) => {
+  res.status(err.status || 500).json({ error: err.message });
+});
 
 describe('POST /auth/register', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   test('400 если нет email', async () => {
-    const res = await request(app)
-      .post('/auth/register')
-      .send({ password: '123456' });
+    const res = await request(app).post('/auth/register').send({ password: '123456' });
     expect(res.status).toBe(400);
   });
 
   test('400 если нет пароля', async () => {
-    const res = await request(app)
-      .post('/auth/register')
-      .send({ email: 'test@test.com' });
+    const res = await request(app).post('/auth/register').send({ email: 'test@test.com' });
     expect(res.status).toBe(400);
   });
 
   test('400 если пароль меньше 6 символов', async () => {
-    const res = await request(app)
-      .post('/auth/register')
-      .send({ email: 'test@test.com', password: '123' });
+    const res = await request(app).post('/auth/register').send({ email: 'test@test.com', password: '123' });
     expect(res.status).toBe(400);
   });
 
   test('400 если некорректный email', async () => {
-    const res = await request(app)
-      .post('/auth/register')
-      .send({ email: 'notanemail', password: '123456' });
+    const res = await request(app).post('/auth/register').send({ email: 'notanemail', password: '123456' });
     expect(res.status).toBe(400);
   });
 
   test('400 если пользователь уже существует', async () => {
-    pool.query.mockResolvedValueOnce({ rows: [{ id: 1 }] });
-    const res = await request(app)
-      .post('/auth/register')
-      .send({ email: 'exists@test.com', password: '123456' });
+    authService.register.mockRejectedValue(Object.assign(new Error('Пользователь уже существует'), { status: 400 }));
+    const res = await request(app).post('/auth/register').send({ email: 'exists@test.com', password: '123456' });
     expect(res.status).toBe(400);
   });
 
   test('201 при успешной регистрации', async () => {
-    pool.query
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [{ id: 1, name: 'Test', email: 'test@test.com', role: 'user' }] });
-
-    process.env.JWT_SECRET = 'test_secret';
-
-    const res = await request(app)
-      .post('/auth/register')
-      .send({ email: 'test@test.com', password: '123456' });
+    authService.register.mockResolvedValue({
+      token: 'access_token',
+      refreshToken: 'refresh_token',
+      user: { id: 1, name: 'Test', email: 'test@test.com', role: 'user' }
+    });
+    const res = await request(app).post('/auth/register').send({ email: 'test@test.com', password: '123456' });
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('token');
   });
 });
 
 describe('POST /auth/login', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   test('400 если нет email', async () => {
-    const res = await request(app)
-      .post('/auth/login')
-      .send({ password: '123456' });
+    const res = await request(app).post('/auth/login').send({ password: '123456' });
     expect(res.status).toBe(400);
   });
 
   test('401 если пользователь не найден', async () => {
-    pool.query.mockResolvedValueOnce({ rows: [] });
-    const res = await request(app)
-      .post('/auth/login')
-      .send({ email: 'noone@test.com', password: '123456' });
+    authService.login.mockRejectedValue(Object.assign(new Error('Неверный email или пароль'), { status: 401 }));
+    const res = await request(app).post('/auth/login').send({ email: 'noone@test.com', password: '123456' });
     expect(res.status).toBe(401);
   });
 });

@@ -265,12 +265,12 @@ function buildReason(profile, specialty, score, testTags = []) {
   return reason || 'Рекомендация основана на общей похожести профиля и специальности.';
 }
 
-module.exports = {
+export {
   calculateScore,
   buildReason,
   classifyCareerGoal,
-  _cosineSimilarity:   cosineSimilarity,
-  _normalizeArray:     normalizeArray,
-  _calcEntPenalty:     calcEntPenalty,
-  _calcDislikePenalty: calcDislikePenalty,
+  cosineSimilarity as _cosineSimilarity,
+  normalizeArray as _normalizeArray,
+  calcEntPenalty as _calcEntPenalty,
+  calcDislikePenalty as _calcDislikePenalty
 };

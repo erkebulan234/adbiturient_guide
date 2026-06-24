@@ -1,4 +1,4 @@
-const pool = require('../config/db');
+import pool from '../config/db.js';
 
 async function findByUserId(userId) {
   const result = await pool.query(
@@ -60,4 +60,4 @@ async function remove(userId, programId) {
   return result.rows[0] || null;
 }
 
-module.exports = { findByUserId, findIds, add, remove };
+export { findByUserId, findIds, add, remove };

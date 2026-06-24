@@ -1,4 +1,4 @@
-const pool = require('../config/db');
+import pool from '../config/db.js';
 
 async function findAll({ type, city, search } = {}) {
   const conditions = [];
@@ -16,7 +16,12 @@ async function findAll({ type, city, search } = {}) {
 
   if (search) {
     values.push(`%${search}%`);
-    conditions.push(`name ILIKE $${values.length}`);
+    conditions.push(`
+    (
+      name ILIKE $${values.length}
+      OR description ILIKE $${values.length}
+    )
+    `);
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -28,4 +33,4 @@ async function findAll({ type, city, search } = {}) {
   return result.rows;
 }
 
-module.exports = { findAll };
+export { findAll };

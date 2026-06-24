@@ -1,4 +1,4 @@
-const specialtiesRepository = require('../repositories/specialtiesRepository');
+import * as specialtiesRepository from '../repositories/specialtiesRepository.js';
 
 async function getSpecialties(filters) {
   return specialtiesRepository.findAll(filters);
@@ -16,4 +16,4 @@ async function getSpecialtyById(id) {
   return specialty;
 }
 
-module.exports = { getSpecialties, getSpecialtyById };
+export { getSpecialties, getSpecialtyById };

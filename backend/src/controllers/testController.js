@@ -1,4 +1,4 @@
-const testService = require('../services/testService');
+import * as testService from '../services/testService.js';
 
 async function getTests(req, res, next) {
   try {
@@ -42,4 +42,4 @@ async function getMyResults(req, res, next) {
   }
 }
 
-module.exports = { getTests, getTestById, submitTest, getMyResults };
+export { getTests, getTestById, submitTest, getMyResults };

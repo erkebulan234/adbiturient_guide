@@ -1,18 +1,8 @@
-const pool = require('../config/db');
-const { calculateScore, buildReason } = require('./recommender');
-const recommendationsRepository = require('../repositories/recommendationsRepository');
-const profileRepository = require('../repositories/profileRepository');
-
-async function getLastTestTags(userId) {
-  const result = await pool.query(
-    `SELECT result_tags FROM test_results
-     WHERE user_id = $1
-     ORDER BY created_at DESC
-     LIMIT 1`,
-    [userId]
-  );
-  return result.rows[0]?.result_tags || [];
-}
+import pool from '../config/db.js';
+import { calculateScore, buildReason } from './recommender.js';
+import * as recommendationsRepository from '../repositories/recommendationsRepository.js';
+import * as profileRepository from '../repositories/profileRepository.js';
+import * as testRepository from '../repositories/testRepository.js';
 
 function scorePrograms(programs, profile, testTags) {
   return programs
@@ -24,7 +14,7 @@ function scorePrograms(programs, profile, testTags) {
     .sort((a, b) => b.score - a.score);
 }
 
-function deduplicatePrograms(scored) {
+function _deduplicatePrograms(scored) {
   const seen = new Map();
 
   for (const item of scored) {
@@ -47,9 +37,29 @@ function deduplicatePrograms(scored) {
   return Array.from(seen.values());
 }
 
-function pickTop(deduplicated, n = 5) {
+function _pickTop(deduplicated, n = 5) {
   const withScore = deduplicated.filter(item => item.score > 0);
   return withScore.length > 0 ? withScore.slice(0, n) : deduplicated.slice(0, n);
+}
+
+async function _saveRecommendations(client, userId, recommendations) {
+  await client.query('DELETE FROM recommendations WHERE user_id = $1', [userId]);
+
+  if (recommendations.length === 0) return;
+
+  const valuePlaceholders = [];
+  const params = [userId];
+
+  recommendations.forEach((r, i) => {
+    const base = i * 4 + 2;
+    valuePlaceholders.push(`($1, $${base}, $${base + 1}, $${base + 2}, $${base + 3})`);
+    params.push(r.specialty_id, r.program_id, r.score, r.reason);
+  });
+
+  await client.query(
+    `INSERT INTO recommendations (user_id, specialty_id, program_id, score, reason) VALUES ${valuePlaceholders.join(', ')}`,
+    params
+  );
 }
 
 async function generate(userId) {
@@ -61,14 +71,13 @@ async function generate(userId) {
     throw error;
   }
 
-  const testTags = await getLastTestTags(userId);
+  const testTags = await testRepository.getLastTestTags(userId);
 
   let programs = await recommendationsRepository.findProgramsByLevel(
     profile.education_level,
     profile.city || null
   );
 
-  // Если по городу ничего нет — ищем по всей стране
   if (programs.length === 0 && profile.city) {
     programs = await recommendationsRepository.findProgramsByLevel(
       profile.education_level,
@@ -77,13 +86,13 @@ async function generate(userId) {
   }
 
   const scored = scorePrograms(programs, profile, testTags);
-  const deduplicated = deduplicatePrograms(scored);
-  const recommendations = pickTop(deduplicated, 5);
+  const deduplicated = _deduplicatePrograms(scored);
+  const recommendations = _pickTop(deduplicated, 5);
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await recommendationsRepository.replaceForUser(client, userId, recommendations);
+    await _saveRecommendations(client, userId, recommendations);
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');
@@ -99,4 +108,4 @@ async function getForUser(userId) {
   return recommendationsRepository.findByUserId(userId);
 }
 
-module.exports = { generate, getForUser };
+export { generate, getForUser, _saveRecommendations, _deduplicatePrograms, _pickTop };

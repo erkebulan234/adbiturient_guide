@@ -1,4 +1,4 @@
-const pool = require('../config/db');
+import pool from '../config/db.js';
 
 async function findProgramsByLevel(educationLevel, city = null) {
   const result = await pool.query(
@@ -102,4 +102,4 @@ async function replaceForUser(client, userId, recommendations) {
   );
 }
 
-module.exports = { findProgramsByLevel, findByUserId, replaceForUser };
+export { findProgramsByLevel, findByUserId, replaceForUser };

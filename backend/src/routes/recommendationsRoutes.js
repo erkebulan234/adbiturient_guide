@@ -1,7 +1,10 @@
-const router = require('express').Router();
-const authMiddleware = require('../middleware/authMiddleware');
-const recommendationsController = require('../controllers/recommendationsController');
-const pool = require('../config/db');
+import { Router } from 'express';
+
+import authMiddleware from '../middleware/authMiddleware.js';
+import * as recommendationsController from '../controllers/recommendationsController.js';
+import pool from '../config/db.js';
+
+const router = Router();
 
 router.post('/generate', authMiddleware, recommendationsController.generateRecommendations);
 router.get('/', authMiddleware, recommendationsController.getRecommendations);
@@ -47,4 +50,4 @@ router.post('/:id/event', authMiddleware, async (req, res, next) => {
   }
 });
 
-module.exports = router;
+export default router;

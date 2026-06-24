@@ -1,4 +1,4 @@
-const pool = require('../config/db');
+import pool from '../config/db.js';
 
 async function findAll({ educationLevel, search } = {}) {
   const conditions = [];
@@ -31,4 +31,4 @@ async function findById(id) {
   return result.rows[0] || null;
 }
 
-module.exports = { findAll, findById };
+export { findAll, findById };

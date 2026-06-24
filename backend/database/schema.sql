@@ -2,9 +2,10 @@ CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   name VARCHAR(120),
   email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
+  password_hash TEXT,
   role VARCHAR(30) DEFAULT 'user',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  google_id VARCHAR(255) UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS profiles (
@@ -113,6 +114,14 @@ CREATE TABLE IF NOT EXISTS recommendation_events (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_institutions_type_city ON institutions(type, city);
 CREATE INDEX IF NOT EXISTS idx_specialties_education_level ON specialties(education_level);
@@ -123,3 +132,5 @@ CREATE INDEX IF NOT EXISTS idx_recommendations_user_score ON recommendations(use
 CREATE INDEX IF NOT EXISTS idx_rec_events_user ON recommendation_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_rec_events_program ON recommendation_events(program_id);
 CREATE INDEX IF NOT EXISTS idx_rec_events_event ON recommendation_events(event);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);

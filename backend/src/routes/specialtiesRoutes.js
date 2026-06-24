@@ -1,7 +1,9 @@
-const router = require('express').Router();
-const specialtiesController = require('../controllers/specialtiesController');
+import { Router } from 'express';
+import * as specialtiesController from '../controllers/specialtiesController.js';
+
+const router = Router();
 
 router.get('/', specialtiesController.getSpecialties);
 router.get('/:id', specialtiesController.getSpecialtyById);
 
-module.exports = router;
+export default router;

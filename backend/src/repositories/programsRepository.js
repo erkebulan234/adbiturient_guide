@@ -1,4 +1,4 @@
-const pool = require('../config/db');
+import pool from '../config/db.js';
 
 async function findAll({ educationLevel, institutionType, city, search, page = 1, limit = 12 } = {}) {
   const conditions = [];
@@ -15,7 +15,7 @@ async function findAll({ educationLevel, institutionType, city, search, page = 1
   }
 
   if (city) {
-    values.push(city);
+    values.push(`%${city}%`);
     conditions.push(`i.city ILIKE $${values.length}`);
   }
 
@@ -37,6 +37,17 @@ async function findAll({ educationLevel, institutionType, city, search, page = 1
     values
   );
   const total = Number(countResult.rows[0].total);
+
+  const statsResult = await pool.query(
+    `SELECT
+        COUNT(DISTINCT i.city) AS cities,
+        COUNT(*) FILTER (WHERE p.has_grant = true) AS grants
+    FROM programs p
+    JOIN specialties s ON s.id = p.specialty_id
+    JOIN institutions i ON i.id = p.institution_id
+    ${where}`,
+    values
+  );
 
   // Сами данные с LIMIT/OFFSET
   const offset = (page - 1) * limit;
@@ -64,7 +75,14 @@ async function findAll({ educationLevel, institutionType, city, search, page = 1
     dataValues
   );
 
-  return { rows: result.rows, total };
+  return {
+    rows: result.rows,
+    total,
+    stats: {
+      cities: Number(statsResult.rows[0].cities),
+      grants: Number(statsResult.rows[0].grants)
+    }
+  };
 }
 
-module.exports = { findAll };
+export { findAll };

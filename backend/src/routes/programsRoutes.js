@@ -1,6 +1,8 @@
-const router = require('express').Router();
-const programsController = require('../controllers/programsController');
+import { Router } from 'express';
+import * as programsController from '../controllers/programsController.js';
+
+const router = Router();
 
 router.get('/', programsController.getPrograms);
 
-module.exports = router;
+export default router;

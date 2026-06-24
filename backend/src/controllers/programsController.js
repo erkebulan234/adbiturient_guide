@@ -1,4 +1,4 @@
-const programsService = require('../services/programsService');
+import * as programsService from '../services/programsService.js';
 
 async function getPrograms(req, res, next) {
   try {
@@ -12,4 +12,4 @@ async function getPrograms(req, res, next) {
   }
 }
 
-module.exports = { getPrograms };
+export { getPrograms };

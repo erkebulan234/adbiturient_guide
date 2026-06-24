@@ -1,4 +1,4 @@
-const profileService = require('../services/profileService');
+import * as profileService from '../services/profileService.js';
 
 async function getProfile(req, res, next) {
   try {
@@ -18,4 +18,7 @@ async function saveProfile(req, res, next) {
   }
 }
 
-module.exports = { getProfile, saveProfile };
+export {
+  getProfile,
+  saveProfile
+};

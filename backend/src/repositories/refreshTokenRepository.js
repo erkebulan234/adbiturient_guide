@@ -1,5 +1,5 @@
-const pool = require('../config/db');
-const crypto = require('crypto');
+import pool from '../config/db.js';
+import crypto from 'crypto';
 
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -39,4 +39,16 @@ async function revokeAllForUser(userId) {
   );
 }
 
-module.exports = { hashToken, store, find, revoke, revokeAllForUser };
+async function deleteExpiredByUser(userId) {
+  await pool.query(
+    `
+    DELETE
+    FROM refresh_tokens
+    WHERE user_id = $1
+      AND expires_at < NOW()
+    `,
+    [userId]
+  );
+}
+
+export { hashToken, store, find, revoke, revokeAllForUser, deleteExpiredByUser };
